@@ -1,0 +1,4 @@
+Error type 7 at Line 28: Type mismatched for operands.
+Error type 6 at Line 30: The left-hand side of an assignment must be a variable.
+Error type 13 at Line 38: Illegal use of ".".
+Error type 14 at Line 42: Not-existen field.

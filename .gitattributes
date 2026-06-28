@@ -1,0 +1,19 @@
+# 强制文本文件使用 LF 换行，避免 WSL2↔真机 Ubuntu 协作时的 CRLF 问题
+* text=auto
+
+# 源码和脚本显式指定 LF
+*.c text eol=lf
+*.cpp text eol=lf
+*.h text eol=lf
+*.l text eol=lf
+*.y text eol=lf
+*.sh text eol=lf
+Makefile text eol=lf
+makefile text eol=lf
+*.md text eol=lf
+
+# 二进制文件标记，避免被误改
+*.pdf binary
+*.zip binary
+*.exe binary
+*.pyc binary
