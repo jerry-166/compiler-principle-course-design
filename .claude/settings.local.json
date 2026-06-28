@@ -2,7 +2,12 @@
   "permissions": {
     "allow": [
       "Bash(wsl *)",
-      "Bash(cd *)"
+      "Bash(cd *)",
+      "Read(//d/d/workspace/**)",
+      "Read(//d/d/workspace/bianyiyuanli/**)",
+      "Bash(cat inputs/__TRACKED_VAR__.cmm)",
+      "Bash(cat expects/__TRACKED_VAR__.exp)",
+      "Bash(python -c ' *)"
     ]
   }
 }

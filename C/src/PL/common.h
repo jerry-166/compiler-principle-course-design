@@ -6,6 +6,8 @@
 #include <assert.h>
 #include <malloc.h>
 
+#include "clist.h"   // MFC CList 的最小替代实现（Linux 下无 MFC）
+
 
 
 #define FILENAMESIZE 512    //�ļ�������󳤶�
@@ -70,6 +72,10 @@ typedef enum _SYMBOL  //���ŵĶ���
 class SYMLIST:public CList<SYMBOL,SYMBOL>
 {
 };
+
+// MFC 里 POSITION 是全局类型名；这里把 CList 的嵌套游标类型提升为全局 POSITION，
+// 使 PL.cpp 中 "POSITION pos" 这种写法无需改动即可编译。
+typedef CList<SYMBOL,SYMBOL>::POSITION POSITION;
 
 
 SYMLIST DECLBEGSYS,STATBEGSYS,FACBEGSYS,CONSTBEGSYS,TYPEBEGSYS;
