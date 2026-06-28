@@ -5,14 +5,22 @@
 
 set -e
 
-GIT_NAME="jerry"
-GIT_EMAIL="2132049351@qq.com"
-GITHUB_USER="jerry-166"
+# 项目固定的仓库地址
 REPO_SSH="git@github.com:jerry-166/compiler-principle-course-design.git"
 
 echo "=========================================="
 echo "  Git + SSH 配置脚本"
 echo "=========================================="
+echo ""
+
+# 收集个人信息（每个人不同）
+read -p "  输入用户名 (git config user.name): " GIT_NAME
+read -p "  输入邮箱 (git config user.email): " GIT_EMAIL
+
+if [ -z "$GIT_NAME" ] || [ -z "$GIT_EMAIL" ]; then
+    echo "  错误：用户名和邮箱不能为空"
+    exit 1
+fi
 
 # 1. 配置用户信息
 echo ""
