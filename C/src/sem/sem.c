@@ -21,9 +21,12 @@ static void report_undeclared(Symbol s, void *arg);
 static void visit_extdef(Node *extdef);
 static void visit_def(Node *def, int is_global);
 static Type check_exp(Node *exp);
+static int  is_lvalue(Node *exp);
+static Node *array_base_id(Node *exp);
 static void visit_stmt(Node *stmt);
 static void visit_compst(Node *compst, Type ret);
 static void visit_declist(Node *dl, Type base, int is_global);
+static void visit_extdeclist(Node *edl, Type base);
 static void visit_fundef(Node *spec, Node *fundec, Node *compst);
 static void visit_fundecl(Node *spec, Node *fundec);
 
@@ -77,18 +80,33 @@ static void report_undeclared(Symbol s, void *arg)
 static Type struct_specifier_type(Node *ss)
 {
     if (!ss) return NULL;
-    Node *second = (ss->nchild >= 2) ? ss->children[1] : NULL;
-    if (ss->nchild == 5) {
+    /* STRUCT OptTag LC DefList RC  或  STRUCT Tag
+       DefList 为空时会被 addChild 跳过，所以按节点名识别。*/
+    Node *opttag_or_tag = NULL;
+    Node *deflist = NULL;
+    int i;
+    int has_lc = 0;
+    for (i = 0; i < ss->nchild; i++) {
+        Node *c = ss->children[i];
+        if (!c) continue;
+        if (c->is_token) {
+            if (strcmp(c->name, "LC") == 0) has_lc = 1;
+            continue;
+        }
+        if (strcmp(c->name, "OptTag") == 0 || strcmp(c->name, "Tag") == 0)
+            opttag_or_tag = c;
+        else if (strcmp(c->name, "DefList") == 0)
+            deflist = c;
+    }
+    if (has_lc) {
         /* 定义：STRUCT OptTag LC DefList RC */
-        Node *deflist = ss->children[3];
         FieldList fields = collect_fields(deflist);
         Type t = new_structure(fields);
         /* 注册结构体名（OptTag→ID） */
-        if (second && second->nchild > 0) {
-            Node *idnode = second->children[0];
+        if (opttag_or_tag && opttag_or_tag->nchild > 0) {
+            Node *idnode = opttag_or_tag->children[0];
             if (idnode && idnode->is_token && strcmp(idnode->name, "ID") == 0) {
                 if (symtab_lookup(idnode->sval, -1)) {
-                    /* 名字已被占用：错误16 */
                     sem_error(16, idnode->lineno, "Duplicated name.");
                 }
                 Symbol sym = (Symbol)calloc(1, sizeof(struct Symbol_));
@@ -102,17 +120,18 @@ static Type struct_specifier_type(Node *ss)
             }
         }
         return t;
-    } else if (ss->nchild == 2) {
+    } else {
         /* 引用：STRUCT Tag，Tag → ID */
-        Node *idnode = (second && second->nchild > 0) ? second->children[0] : NULL;
-        if (idnode && idnode->is_token && strcmp(idnode->name, "ID") == 0) {
-            Symbol s = symtab_lookup(idnode->sval, SYM_STRUCT);
-            if (!s) {
-                /* 未定义结构体：错误17（A-17.exp 文字 Undefined structure3.）*/
-                sem_error(17, idnode->lineno, "Undefined structure3.");
-                return NULL;
+        if (opttag_or_tag && opttag_or_tag->nchild > 0) {
+            Node *idnode = opttag_or_tag->children[0];
+            if (idnode && idnode->is_token && strcmp(idnode->name, "ID") == 0) {
+                Symbol s = symtab_lookup(idnode->sval, SYM_STRUCT);
+                if (!s) {
+                    sem_error(17, idnode->lineno, "Undefined structure3.");
+                    return NULL;
+                }
+                return s->type;
             }
-            return s->type;
         }
     }
     return NULL;
@@ -238,7 +257,7 @@ static void visit_extdef(Node *extdef)
     Type base = specifier_to_type(spec);
 
     if (second && !second->is_token && strcmp(second->name, "ExtDecList") == 0) {
-        visit_declist(second, base, 1);
+        visit_extdeclist(second, base);
     } else if (second && !second->is_token && strcmp(second->name, "FunDec") == 0) {
         if (extdef->nchild == 3) {
             Node *third = extdef->children[2];
@@ -290,7 +309,7 @@ static void insert_var(Node *vardec, Type base)
     symtab_insert(sym);
 }
 
-/* 遍历 DecList（全局或局部变量定义），逐个建类型填表。*/
+/* 遍历 DecList（局部变量定义，Dec → VarDec | VarDec ASSIGNOP Exp）。*/
 static void visit_declist(Node *dl, Type base, int is_global)
 {
     (void)is_global;
@@ -307,6 +326,16 @@ static void visit_declist(Node *dl, Type base, int is_global)
             (void)check_exp(dec->children[2]);
         }
         dl = (dl->nchild >= 3) ? dl->children[2] : NULL;
+    }
+}
+
+/* 遍历 ExtDecList（全局变量定义，直接是 VarDec 链表，无 Dec 包装）。*/
+static void visit_extdeclist(Node *edl, Type base)
+{
+    while (edl && edl->nchild >= 1) {
+        Node *vardec = edl->children[0];
+        if (vardec) insert_var(vardec, base);
+        edl = (edl->nchild >= 3) ? edl->children[2] : NULL;
     }
 }
 
@@ -457,12 +486,20 @@ static void visit_fundecl(Node *spec, Node *fundec)
 static void visit_fundecl(Node *spec, Node *fundec) { (void)spec; (void)fundec; }
 #endif
 
-/* CompSt → LC DefList StmtList RC */
+/* CompSt → LC DefList StmtList RC
+   注意：DefList 或 StmtList 为空时 parser 返回 NULL，addChild 不加空槽位，
+   导致 children 索引不固定。这里按节点名识别。*/
 static void visit_compst(Node *compst, Type ret)
 {
     if (!compst) return;
-    Node *deflist  = (compst->nchild >= 2) ? compst->children[1] : NULL;
-    Node *stmtlist = (compst->nchild >= 3) ? compst->children[2] : NULL;
+    Node *deflist = NULL, *stmtlist = NULL;
+    int i;
+    for (i = 0; i < compst->nchild; i++) {
+        Node *c = compst->children[i];
+        if (!c || c->is_token) continue;
+        if (strcmp(c->name, "DefList") == 0) deflist = c;
+        else if (strcmp(c->name, "StmtList") == 0) stmtlist = c;
+    }
     while (deflist && deflist->nchild >= 1) {
         Node *def = deflist->children[0];
         if (def && def->nchild >= 2) {
@@ -530,5 +567,186 @@ static void visit_stmt(Node *stmt)
     }
 }
 
-/* ===== 占位（Task 7 替换）===== */
-static Type check_exp(Node *exp) { (void)exp; return NULL; }
+/* ===== 表达式类型推导（Task 7）===== */
+
+/* 判断 Exp 是否左值：ID / Exp[Exp] / Exp.ID 三种产生式。*/
+static int is_lvalue(Node *exp)
+{
+    if (!exp || exp->nchild < 1) return 0;
+    Node *c0 = exp->children[0];
+    if (c0 && c0->is_token && strcmp(c0->name, "ID") == 0 && exp->nchild == 1)
+        return 1;
+    if (c0 && !c0->is_token && strcmp(c0->name, "Exp") == 0) {
+        Node *op = (exp->nchild >= 2) ? exp->children[1] : NULL;
+        if (op && op->is_token &&
+            (strcmp(op->name, "LB") == 0 || strcmp(op->name, "DOT") == 0))
+            return 1;
+    }
+    return 0;
+}
+
+/* 取数组访问表达式最左的 ID 节点（如 a[b][c] → a），用于错误10/13 的行号。*/
+static Node *array_base_id(Node *exp)
+{
+    if (!exp) return NULL;
+    Node *c0 = (exp->nchild >= 1) ? exp->children[0] : NULL;
+    if (c0 && c0->is_token && strcmp(c0->name, "ID") == 0) return c0;
+    if (c0 && !c0->is_token && strcmp(c0->name, "Exp") == 0) return array_base_id(c0);
+    return NULL;
+}
+
+static Type check_exp(Node *exp)
+{
+    if (!exp || exp->nchild < 1) return NULL;
+    Node *c0 = exp->children[0];
+    if (!c0) return NULL;
+
+    /* ID（单个变量）*/
+    if (c0->is_token && strcmp(c0->name, "ID") == 0 && exp->nchild == 1) {
+        Symbol s = symtab_lookup(c0->sval, SYM_VAR);
+        if (!s) {
+            Symbol fn = symtab_lookup(c0->sval, SYM_FUNC);
+            if (!fn) {
+                /* 若有同名结构体也不报错误1（让结构体误用走错误 17/13）*/
+                Symbol st = symtab_lookup(c0->sval, SYM_STRUCT);
+                if (!st) sem_error(1, c0->lineno, "Undefined Variable.");
+            }
+            return NULL;
+        }
+        return s->type;
+    }
+
+    /* INT / FLOAT */
+    if (c0->is_token && strcmp(c0->name, "INT") == 0) return new_basic(0);
+    if (c0->is_token && strcmp(c0->name, "FLOAT") == 0) return new_basic(1);
+
+    /* ID LP ... RP：函数调用 */
+    if (c0->is_token && strcmp(c0->name, "ID") == 0 && exp->nchild >= 3) {
+        Node *lp = exp->children[1];
+        if (lp && lp->is_token && strcmp(lp->name, "LP") == 0) {
+            Symbol fn = symtab_lookup(c0->sval, SYM_FUNC);
+            if (!fn) {
+                Symbol v = symtab_lookup(c0->sval, SYM_VAR);
+                if (!v) sem_error(2, c0->lineno, "Undefined function.");
+                else    sem_error(11, c0->lineno, "Not a function.");
+                return NULL;
+            }
+            /* 收集实参类型（头插）*/
+            FieldList args = NULL;
+            int nargs = 0;
+            if (exp->nchild == 4) {
+                Node *argsnode = exp->children[2];
+                while (argsnode && argsnode->nchild >= 1) {
+                    Type at = check_exp(argsnode->children[0]);
+                    args = new_field("a", at, args);
+                    nargs++;
+                    argsnode = (argsnode->nchild >= 3) ? argsnode->children[2] : NULL;
+                }
+            }
+            /* 错误9：实参数目或类型不匹配 */
+            if (fn->nparam != nargs) {
+                sem_error(9, c0->lineno, "Function is not applicable for arguments.");
+            } else {
+                FieldList p = fn->params;
+                FieldList a = args;
+                int mismatch = 0;
+                while (p && a) {
+                    if (!type_equal(p->type, a->type)) { mismatch = 1; break; }
+                    p = p->tail; a = a->tail;
+                }
+                if (mismatch)
+                    sem_error(9, c0->lineno, "Function is not applicable for arguments.");
+            }
+            return fn->type;
+        }
+    }
+
+    /* LP Exp RP */
+    if (c0->is_token && strcmp(c0->name, "LP") == 0) {
+        return check_exp(exp->children[1]);
+    }
+
+    /* MINUS Exp / NOT Exp（一元）*/
+    if (c0->is_token && (strcmp(c0->name, "MINUS") == 0 || strcmp(c0->name, "NOT") == 0)) {
+        Type t = check_exp(exp->children[1]);
+        if (strcmp(c0->name, "NOT") == 0) {
+            if (t && !(t->kind == BASIC && t->u.basic == 0))
+                sem_error(7, c0->lineno, "Type mismatched for operands.");
+            return new_basic(0);
+        }
+        if (t && t->kind != BASIC)
+            sem_error(7, c0->lineno, "Type mismatched for operands.");
+        return t;
+    }
+
+    /* 二元：Exp OP Exp / Exp LB Exp RB / Exp DOT ID */
+    if (!c0->is_token && strcmp(c0->name, "Exp") == 0) {
+        Node *op = (exp->nchild >= 2) ? exp->children[1] : NULL;
+        const char *opn = (op && op->is_token) ? op->name : "";
+
+        if (strcmp(opn, "ASSIGNOP") == 0) {
+            Node *lhs = c0, *rhs = exp->children[2];
+            if (!is_lvalue(lhs)) {
+                sem_error(6, op->lineno, "The left-hand side of an assignment must be a variable.");
+            }
+            Type tl = check_exp(lhs);
+            Type tr = check_exp(rhs);
+            if (tl && tr && !type_equal(tl, tr))
+                sem_error(5, op->lineno, "Type mismatched for assignment.");
+            return tl;
+        }
+        if (strcmp(opn, "AND") == 0 || strcmp(opn, "OR") == 0 || strcmp(opn, "RELOP") == 0) {
+            Type tl = check_exp(c0), tr = check_exp(exp->children[2]);
+            if (tl && !(tl->kind == BASIC && tl->u.basic == 0))
+                sem_error(7, op->lineno, "Type mismatched for operands.");
+            if (tr && !(tr->kind == BASIC && tr->u.basic == 0))
+                sem_error(7, op->lineno, "Type mismatched for operands.");
+            return new_basic(0);
+        }
+        if (strcmp(opn, "PLUS") == 0 || strcmp(opn, "MINUS") == 0 ||
+            strcmp(opn, "STAR") == 0 || strcmp(opn, "DIV") == 0) {
+            Type tl = check_exp(c0), tr = check_exp(exp->children[2]);
+            if (tl && tr) {
+                if (tl->kind != BASIC || tr->kind != BASIC || tl->u.basic != tr->u.basic) {
+                    sem_error(7, op->lineno, "Type mismatched for operands.");
+                    return NULL;   /* 短路：避免上层基于错误类型继续报错误5 */
+                }
+            }
+            return (tl && tr) ? tl : (tl ? tl : tr);
+        }
+        if (strcmp(opn, "LB") == 0) {
+            /* 数组访问 a[i] */
+            Type arr = check_exp(c0);
+            Node *idxnode = exp->children[2];
+            Type idx = check_exp(idxnode);
+            if (arr && arr->kind != ARRAY) {
+                Node *idn = array_base_id(c0);
+                sem_error(10, idn ? idn->lineno : op->lineno, "Not an array.");
+                return NULL;
+            }
+            if (idx && !(idx->kind == BASIC && idx->u.basic == 0)) {
+                sem_error(12, idxnode->lineno, "Not an integer.");
+            }
+            return arr ? arr->u.array.elem : NULL;
+        }
+        if (strcmp(opn, "DOT") == 0) {
+            /* 结构体访问 a.f */
+            Type st = check_exp(c0);
+            Node *idn = exp->children[2];
+            if (st && st->kind != STRUCTURE) {
+                sem_error(13, op->lineno, "Illegal use of \".\".");
+                return NULL;
+            }
+            if (st && idn && idn->is_token) {
+                FieldList f = st->u.structure;
+                while (f) {
+                    if (strcmp(f->name, idn->sval) == 0) return f->type;
+                    f = f->tail;
+                }
+                sem_error(14, idn->lineno, "Not-existen field.");
+            }
+            return NULL;
+        }
+    }
+    return NULL;
+}
