@@ -82,7 +82,8 @@ extern int yydebug;
     LC = 283,                      /* LC  */
     RC = 284,                      /* RC  */
     COMPOUND_ASSIGN = 285,         /* COMPOUND_ASSIGN  */
-    UMINUS = 286                   /* UMINUS  */
+    UMINUS = 286,                  /* UMINUS  */
+    CONFLICT_DEF_STMT = 287        /* CONFLICT_DEF_STMT  */
   };
   typedef enum yytokentype yytoken_kind_t;
 #endif
@@ -101,7 +102,7 @@ union YYSTYPE
     } tok;
     Node *node;
 
-#line 105 "C/src/syntax/parser.tab.h"
+#line 106 "C/src/syntax/parser.tab.h"
 
 };
 typedef union YYSTYPE YYSTYPE;

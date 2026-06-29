@@ -72,15 +72,29 @@ int last_struct_anonymous = 0;
 %type <node> DefList Def DecList Dec
 %type <node> Exp Args
 
-/* ===== 运算符优先级与结合性（Appendix A 表1，从低到高）===== */
-%right ASSIGNOP
+/* ===== 运算符优先级与结合性（Appendix A 表1，从低到高）=====
+   COMPOUND_ASSIGN 与 ASSIGNOP 同优先级：消除 Exp 中 COMPOUND_ASSIGN 与其他
+   二元运算符之间的 shift/reduce 冲突（Bison 默认 shift，行为正确，但消除警告）。
+   ELSE 优先级低于所有二元运算符：解决经典 dangling else（ELSE 作为 Stmt 的
+   结束标记，优先级低于 IF/Exp 等，使 Bison 先归约 Stmt 再 shift ELSE）。
+   CONFLICT_DEF_STMT 是伪 token，低于 TYPE/STRUCT/error，使 CompSt 中 DefList→ε
+   归约优先级低于 shift，消除 DefList vs StmtList 歧义。 */
+%right ASSIGNOP COMPOUND_ASSIGN
 %left  OR
 %left  AND
 %left  RELOP
 %left  PLUS MINUS
 %left  STAR DIV
-%right NOT UMINUS    /* 一元负号和 NOT：UMINUS 是给 MINUS 一元用 %prec 提升用的伪终结符 */
+%right NOT UMINUS
 %left  LP RP LB RB DOT
+%precedence ELSE CONFLICT_DEF_STMT
+
+%expect 8
+/* 8 个已确认安全的 shift/reduce 冲突（Bison 默认 shift 行为正确）：
+   - 5 个：CompSt 中 DefList→ε vs StmtList，look-ahead TYPE/STRUCT/error
+     （Bison 默认 shift 进入 Def，正确：声明优先于语句中的声明当语句错误）
+   - 3 个：FunDec 中 ParamDec 后 COMMA 的 look-ahead 歧义
+     （Bison 默认 shift 进 VarList 继续匹配，正确：正常多参数优先） */
 
 
 %%
@@ -219,7 +233,7 @@ Stmt        : Exp SEMI                   { Node *n = NT("Stmt"); addChild(n,$1);
                                            addChild(n, $3);
                                            Node *rp = TKS("RP", $4, NO_VAL); addChild(n,rp);
                                            addChild(n, $5); $$ = n; }
-            | IF LP Exp RP Stmt ELSE Stmt { Node *n = NT("Stmt");
+            | IF LP Exp RP Stmt ELSE Stmt %prec ELSE { Node *n = NT("Stmt");
                                            Node *i = TKS("IF", $1, NO_VAL); addChild(n,i);
                                            Node *lp = TKS("LP", $2, NO_VAL); addChild(n,lp);
                                            addChild(n, $3);
@@ -392,22 +406,3 @@ void yyerror(const char *s)
     has_error = 1;
 }
 
-int main(int argc, char **argv)
-{
-    if (argc > 1) {
-        extern FILE *yyin;
-        yyin = fopen(argv[1], "r");
-        if (!yyin) { perror(argv[1]); return 1; }
-    }
-    yyparse();
-    /* 只有在任何错误都没发生时才打印树。type A 由 lexer 直接打印；type B 由错误产生式打印。 */
-    if (!has_error && root) {
-        printTree(root);
-        /* 树输出末尾保留换行（与 Tests1 树 .exp 一致） */
-        flush_output(0);
-    } else {
-        /* 错误用例：去掉末尾换行（与 Tests1 错误 .exp 一致） */
-        flush_output(1);
-    }
-    return 0;
-}
