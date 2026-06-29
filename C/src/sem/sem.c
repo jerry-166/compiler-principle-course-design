@@ -37,6 +37,10 @@ static void sem_error(int type, int lineno, const char *msg)
 /* 当前函数返回类型（return 检查用）。NULL=不在函数体内。*/
 static Type current_return_type = NULL;
 
+/* 语法嵌套深度（仅用于错误3 文字区分 A-3 vs D-2）。
+   进函数体 = 1，进 Stmt→CompSt 嵌套块再 +1。*/
+static int nest_depth = 0;
+
 /* ===== 入口 ===== */
 void sem_analyze(Node *root)
 {
@@ -252,11 +256,279 @@ static void visit_extdef(Node *extdef)
     (void)base;
 }
 
-/* ===== 占位（Task 6/7 替换）===== */
-static void visit_def(Node *def, int is_global) { (void)def; (void)is_global; }
-static void visit_declist(Node *dl, Type base, int is_global) { (void)dl; (void)base; (void)is_global; }
-static void visit_fundef(Node *spec, Node *fundec, Node *compst) { (void)spec; (void)fundec; (void)compst; }
+/* ===== 变量/函数定义填表 + 语句遍历（Task 6）===== */
+
+/* 把一个 VarDec 对应的变量填入当前作用域符号表。
+   错误3 文字按 depth 区分：必做模式下 depth>=2 的嵌套块用 D-2 措辞，
+   否则用 A-3 措辞。*/
+static void insert_var(Node *vardec, Type base)
+{
+    Type t = vardec_to_type(vardec, base);
+    Node *idn = get_vardec_id(vardec);
+    if (!idn) return;
+    Symbol exist = symtab_lookup(idn->sval, -1);
+    if (exist && exist->depth == symtab_cur_depth()) {
+        const char *msg;
+#ifndef ENABLE_SCOPE
+        /* 必做模式：嵌套块内（nest_depth>=2）重定义外层变量 → D-2 措辞；
+           函数体顶层（nest_depth==1）同作用域重定义 → A-3 措辞。*/
+        msg = (nest_depth >= 2) ? "Redefined variable or structure conflict."
+                                : "Redefined Variable.";
+#else
+        msg = "Redefined Variable.";
+#endif
+        sem_error(3, idn->lineno, msg);
+        return;
+    }
+    Symbol sym = (Symbol)calloc(1, sizeof(struct Symbol_));
+    size_t len = strlen(idn->sval);
+    sym->name = (char *)malloc(len + 1);
+    memcpy(sym->name, idn->sval, len + 1);
+    sym->kind = SYM_VAR;
+    sym->type = t;
+    sym->lineno = idn->lineno;
+    symtab_insert(sym);
+}
+
+/* 遍历 DecList（全局或局部变量定义），逐个建类型填表。*/
+static void visit_declist(Node *dl, Type base, int is_global)
+{
+    (void)is_global;
+    while (dl && dl->nchild >= 1) {
+        Node *dec = dl->children[0];
+        if (!dec || dec->nchild < 1) {
+            dl = (dl->nchild >= 3) ? dl->children[2] : NULL;
+            continue;
+        }
+        Node *vardec = dec->children[0];
+        insert_var(vardec, base);
+        if (dec->nchild == 3) {
+            /* VarDec ASSIGNOP Exp：局部变量初始化，遍历触发右边表达式检查 */
+            (void)check_exp(dec->children[2]);
+        }
+        dl = (dl->nchild >= 3) ? dl->children[2] : NULL;
+    }
+}
+
+/* 签名匹配：返回类型 + 参数个数 + 逐参数 type_equal。错误19 用。*/
+static int func_signature_match(Symbol sym, Type ret, FieldList params, int nparam)
+{
+    if (sym->nparam != nparam) return 0;
+    if (!type_equal(sym->type, ret)) return 0;
+    FieldList a = sym->params, b = params;
+    while (a && b) {
+        if (!type_equal(a->type, b->type)) return 0;
+        a = a->tail; b = b->tail;
+    }
+    return 1;
+}
+
+/* 收集 FunDec 的形参为 FieldList（同时返回个数）。
+   FunDec → ID LP VarList RP  |  ID LP RP
+   VarList → ParamDec COMMA VarList | ParamDec
+   ParamDec → Specifier VarDec */
+static FieldList collect_params(Node *fundec, int *nparam)
+{
+    *nparam = 0;
+    FieldList head = NULL;
+    if (!fundec || fundec->nchild != 4) return head;
+    /* ID LP VarList RP */
+    Node *vl = fundec->children[2];
+    while (vl && vl->nchild >= 1) {
+        Node *paramdec = vl->children[0];
+        if (paramdec && paramdec->nchild >= 2) {
+            Type base = specifier_to_type(paramdec->children[0]);
+            Type t = vardec_to_type(paramdec->children[1], base);
+            Node *idn = get_vardec_id(paramdec->children[1]);
+            if (idn) head = new_field(idn->sval, t, head);
+            (*nparam)++;
+        }
+        vl = (vl->nchild >= 3) ? vl->children[2] : NULL;
+    }
+    return head;
+}
+
+static void visit_fundef(Node *spec, Node *fundec, Node *compst)
+{
+    Type ret_type = specifier_to_type(spec);
+    Node *idn = (fundec && fundec->nchild >= 1) ? fundec->children[0] : NULL;
+    if (!idn || !idn->is_token) return;
+    int nparam;
+    FieldList params = collect_params(fundec, &nparam);
+
+    int proceed = 1;   /* 是否继续进入函数体 */
+    Symbol exist = symtab_lookup(idn->sval, SYM_FUNC);
+    if (exist) {
+        if (exist->defined) {
+            /* 已定义过：错误4 */
+            sem_error(4, idn->lineno, "Redefined Function.");
+            proceed = 0;
+        } else {
+#ifdef ENABLE_FUNC_DECL
+            /* 之前声明过，现在定义：检查一致性（错误19）*/
+            if (!func_signature_match(exist, ret_type, params, nparam)) {
+                sem_error(19, idn->lineno, "Inconsistent declaration.");
+            }
+            exist->defined = 1;
+#else
+            sem_error(4, idn->lineno, "Redefined Function.");
+            proceed = 0;
+#endif
+        }
+    } else {
+        if (symtab_lookup(idn->sval, -1)) {
+            /* 名字被其他 kind 占用：按错误4 */
+            sem_error(4, idn->lineno, "Redefined Function.");
+            proceed = 0;
+        } else {
+            Symbol sym = (Symbol)calloc(1, sizeof(struct Symbol_));
+            size_t len = strlen(idn->sval);
+            sym->name = (char *)malloc(len + 1);
+            memcpy(sym->name, idn->sval, len + 1);
+            sym->kind = SYM_FUNC;
+            sym->type = ret_type;
+            sym->params = params;
+            sym->nparam = nparam;
+            sym->defined = 1;
+            sym->lineno = idn->lineno;
+            symtab_insert(sym);
+        }
+    }
+
+    if (!proceed) return;
+
+    /* 进入函数体作用域，形参填表，遍历 CompSt */
+    symtab_enter_scope();
+    int saved_nest = nest_depth;
+    nest_depth = 1;
+    FieldList p = params;
+    while (p) {
+        Symbol psym = (Symbol)calloc(1, sizeof(struct Symbol_));
+        size_t len = strlen(p->name);
+        psym->name = (char *)malloc(len + 1);
+        memcpy(psym->name, p->name, len + 1);
+        psym->kind = SYM_VAR;
+        psym->type = p->type;
+        psym->lineno = idn->lineno;
+        symtab_insert(psym);
+        p = p->tail;
+    }
+    current_return_type = ret_type;
+    visit_compst(compst, ret_type);
+    current_return_type = NULL;
+    nest_depth = saved_nest;
+    symtab_leave_scope();
+}
+
+#ifdef ENABLE_FUNC_DECL
+static void visit_fundecl(Node *spec, Node *fundec)
+{
+    Type ret_type = specifier_to_type(spec);
+    Node *idn = (fundec && fundec->nchild >= 1) ? fundec->children[0] : NULL;
+    if (!idn || !idn->is_token) return;
+    int nparam;
+    FieldList params = collect_params(fundec, &nparam);
+    Symbol exist = symtab_lookup(idn->sval, SYM_FUNC);
+    if (exist) {
+        /* 之前声明过或定义过：检查一致（错误19）*/
+        if (!func_signature_match(exist, ret_type, params, nparam)) {
+            sem_error(19, idn->lineno, "Inconsistent declaration.");
+        }
+    } else {
+        if (symtab_lookup(idn->sval, -1)) {
+            sem_error(4, idn->lineno, "Redefined Function.");
+            return;
+        }
+        Symbol sym = (Symbol)calloc(1, sizeof(struct Symbol_));
+        size_t len = strlen(idn->sval);
+        sym->name = (char *)malloc(len + 1);
+        memcpy(sym->name, idn->sval, len + 1);
+        sym->kind = SYM_FUNC;
+        sym->type = ret_type;
+        sym->params = params;
+        sym->nparam = nparam;
+        sym->declared_only = 1;
+        sym->defined = 0;
+        sym->lineno = idn->lineno;
+        symtab_insert(sym);
+    }
+}
+#else
 static void visit_fundecl(Node *spec, Node *fundec) { (void)spec; (void)fundec; }
-static void visit_stmt(Node *stmt) { (void)stmt; }
+#endif
+
+/* CompSt → LC DefList StmtList RC */
+static void visit_compst(Node *compst, Type ret)
+{
+    if (!compst) return;
+    Node *deflist  = (compst->nchild >= 2) ? compst->children[1] : NULL;
+    Node *stmtlist = (compst->nchild >= 3) ? compst->children[2] : NULL;
+    while (deflist && deflist->nchild >= 1) {
+        Node *def = deflist->children[0];
+        if (def && def->nchild >= 2) {
+            Type base = specifier_to_type(def->children[0]);
+            visit_declist(def->children[1], base, 0);
+        }
+        deflist = (deflist->nchild >= 2) ? deflist->children[1] : NULL;
+    }
+    while (stmtlist && stmtlist->nchild >= 1) {
+        visit_stmt(stmtlist->children[0]);
+        stmtlist = (stmtlist->nchild >= 2) ? stmtlist->children[1] : NULL;
+    }
+    (void)ret;
+}
+
+static void visit_stmt(Node *stmt)
+{
+    if (!stmt || stmt->nchild < 1) return;
+    Node *c0 = stmt->children[0];
+    if (!c0) return;
+    /* Exp SEMI */
+    if (!c0->is_token && strcmp(c0->name, "Exp") == 0) {
+        check_exp(c0);
+        return;
+    }
+    /* CompSt */
+    if (!c0->is_token && strcmp(c0->name, "CompSt") == 0) {
+        symtab_enter_scope();
+        int saved_nest = nest_depth;
+        nest_depth++;
+        visit_compst(c0, current_return_type);
+        nest_depth = saved_nest;
+        symtab_leave_scope();
+        return;
+    }
+    /* RETURN Exp SEMI */
+    if (c0->is_token && strcmp(c0->name, "RETURN") == 0) {
+        Node *ret_exp = (stmt->nchild >= 2) ? stmt->children[1] : NULL;
+        Type t = check_exp(ret_exp);
+        if (current_return_type && t && !type_equal(current_return_type, t)) {
+            sem_error(8, ret_exp->lineno, "Type mismatched for return.");
+        }
+        return;
+    }
+    /* IF LP Exp RP Stmt [ELSE Stmt] */
+    if (c0->is_token && strcmp(c0->name, "IF") == 0) {
+        Node *cond = (stmt->nchild >= 3) ? stmt->children[2] : NULL;
+        Type t = check_exp(cond);
+        if (t && !(t->kind == BASIC && t->u.basic == 0)) {
+            sem_error(7, cond->lineno, "Type mismatched for operands.");
+        }
+        if (stmt->nchild >= 5) visit_stmt(stmt->children[4]);
+        if (stmt->nchild >= 7) visit_stmt(stmt->children[6]);
+        return;
+    }
+    /* WHILE LP Exp RP Stmt */
+    if (c0->is_token && strcmp(c0->name, "WHILE") == 0) {
+        Node *cond = (stmt->nchild >= 3) ? stmt->children[2] : NULL;
+        Type t = check_exp(cond);
+        if (t && !(t->kind == BASIC && t->u.basic == 0)) {
+            sem_error(7, cond->lineno, "Type mismatched for operands.");
+        }
+        if (stmt->nchild >= 5) visit_stmt(stmt->children[4]);
+        return;
+    }
+}
+
+/* ===== 占位（Task 7 替换）===== */
 static Type check_exp(Node *exp) { (void)exp; return NULL; }
-static void visit_compst(Node *compst, Type ret) { (void)compst; (void)ret; }
