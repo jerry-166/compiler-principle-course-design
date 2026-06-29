@@ -2,7 +2,15 @@
   "permissions": {
     "allow": [
       "Bash(wsl *)",
-      "Bash(cd *)"
+      "Bash(cd *)",
+      "Read(//d/d/workspace/**)",
+      "Read(//d/d/workspace/bianyiyuanli/**)",
+      "Bash(cat inputs/__TRACKED_VAR__.cmm)",
+      "Bash(cat expects/__TRACKED_VAR__.exp)",
+      "Bash(python -c ' *)",
+      "Bash(wsl.exe -d Ubuntu -- bash -c \"cd /mnt/d/workspace/bianyiyuanli && ./C/bin/scanner Tests/Tests1/inputs/A-5.cmm\")",
+      "Bash(wsl.exe --list --verbose)",
+      "Bash(wsl.exe -e bash -c \"which bison flex gcc; bison --version 2>&1 | head -1; flex --version 2>&1 | head -1; gcc --version 2>&1 | head -1\")"
     ]
   }
 }
