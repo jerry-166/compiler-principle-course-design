@@ -32,6 +32,17 @@
 /* 把当前词素按进制转十进制 long。第三个参数 8/10/16。 */
 #define TO_LONG(base)  strtol(yytext, NULL, base)
 
+/* 复制当前词素（yytext 长度 yyleng）。替代 strdup，避免 -std=c99 严格模式下
+   strdup 未声明导致返回 int 截断指针（GCC 7.5 + 64 位会段错误）。*/
+#define DUP_YYTEXT()  dup_yytext(yytext, yyleng)
+
+static char *dup_yytext(const char *s, int len)
+{
+    char *p = (char *)malloc((size_t)len + 1);
+    if (p) { memcpy(p, s, (size_t)len); p[len] = '\0'; }
+    return p;
+}
+
 /* YY_USER_ACTION：flex 每次成功匹配一条规则、执行 action 之前自动调用。
    统一在这里设置当前 Token 的行号，避免每条规则都写一遍。 */
 #define YY_USER_ACTION  yylval.tok.line = yylineno;
@@ -57,6 +68,9 @@ base        ({digit}+\.{digit}*|\.{digit}+)
                             if (prev == '*' && c == '/') break;
                             prev = c;
                         }
+                        if (c == 0) {
+                            out("Error type A at Line %d: Unclosed comment.\n", yylineno);
+                        }
                     }
 
  /* ===== 空白符：丢弃 ===== */
@@ -67,10 +81,10 @@ base        ({digit}+\.{digit}*|\.{digit}+)
     单独给一个 Token，配合 parser 的错误产生式报 "Unsupported compound assignment"。
     必须排在单字符 "+" "-" "*" "/" 和 "=" 之前（最长匹配 + 等长顺序）。 */
 
-"+="                { yylval.tok.sval = strdup(yytext); return COMPOUND_ASSIGN; }
-"-="                { yylval.tok.sval = strdup(yytext); return COMPOUND_ASSIGN; }
-"*="                { yylval.tok.sval = strdup(yytext); return COMPOUND_ASSIGN; }
-"/="                { yylval.tok.sval = strdup(yytext); return COMPOUND_ASSIGN; }
+"+="                { yylval.tok.sval = DUP_YYTEXT(); return COMPOUND_ASSIGN; }
+"-="                { yylval.tok.sval = DUP_YYTEXT(); return COMPOUND_ASSIGN; }
+"*="                { yylval.tok.sval = DUP_YYTEXT(); return COMPOUND_ASSIGN; }
+"/="                { yylval.tok.sval = DUP_YYTEXT(); return COMPOUND_ASSIGN; }
 
  /* ===== 多字符运算符（必须排在单字符前）===== */
 
@@ -83,8 +97,8 @@ base        ({digit}+\.{digit}*|\.{digit}+)
 
  /* ===== 关键字（必须排在 ID 前）===== */
 
-"int"               { yylval.tok.sval = strdup(yytext); return TYPE; }
-"float"             { yylval.tok.sval = strdup(yytext); return TYPE; }
+"int"               { yylval.tok.sval = DUP_YYTEXT(); return TYPE; }
+"float"             { yylval.tok.sval = DUP_YYTEXT(); return TYPE; }
 "struct"            { return STRUCT; }
 "return"            { return RETURN; }
 "if"                { return IF; }
@@ -93,7 +107,7 @@ base        ({digit}+\.{digit}*|\.{digit}+)
 
  /* ===== 标识符 ID ===== */
 
-{letter}({letter}|{digit})*  { yylval.tok.sval = strdup(yytext); return ID; }
+{letter}({letter}|{digit})*  { yylval.tok.sval = DUP_YYTEXT(); return ID; }
 
  /* ===== 整型常数 INT（选做 2.1：十/八/十六进制）===== */
 

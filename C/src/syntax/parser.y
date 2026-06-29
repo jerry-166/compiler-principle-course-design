@@ -120,6 +120,19 @@ ExtDef     : Specifier ExtDecList SEMI   { Node *n = NT("ExtDef"); addChild(n,$1
                                              }
                                              last_struct_anonymous = 0; }
            | Specifier FunDec CompSt     { Node *n = NT("ExtDef"); addChild(n,$1); addChild(n,$2); addChild(n,$3); $$ = n; }
+           | Specifier FunDec SEMI       {
+#ifdef ENABLE_FUNC_DECL
+                                          Node *n = NT("ExtDef"); addChild(n,$1);
+                                          addChild(n, $2);
+                                          Node *s = TKS("SEMI", $3, NO_VAL); addChild(n, s);
+                                          $$ = n;
+#else
+                                          /* 未启用函数声明（要求3.1）：报 type B，
+                                             文字与 D-1.exp 一致。$2 是 FunDec，行号=ID 行号。 */
+                                          out("Error type B at Line %d: Syntax error.\n", $2->lineno);
+                                          has_error = 1; $$ = NULL;
+#endif
+                                          }
            /* Tests1 A-4: 全局变量不允许初始化，如 float ratio = 1.5; */
            | Specifier ExtDecList ASSIGNOP Exp SEMI  { out("Error type B at Line %d: Global variable initialization not allowed.\n", $3.line);
                                            has_error = 1; $$ = NULL; }

@@ -579,12 +579,23 @@ char *yytext;
 /* 把当前词素按进制转十进制 long。第三个参数 8/10/16。 */
 #define TO_LONG(base)  strtol(yytext, NULL, base)
 
+/* 复制当前词素（yytext 长度 yyleng）。替代 strdup，避免 -std=c99 严格模式下
+   strdup 未声明导致返回 int 截断指针（GCC 7.5 + 64 位会段错误）。*/
+#define DUP_YYTEXT()  dup_yytext(yytext, yyleng)
+
+static char *dup_yytext(const char *s, int len)
+{
+    char *p = (char *)malloc((size_t)len + 1);
+    if (p) { memcpy(p, s, (size_t)len); p[len] = '\0'; }
+    return p;
+}
+
 /* YY_USER_ACTION：flex 每次成功匹配一条规则、执行 action 之前自动调用。
    统一在这里设置当前 Token 的行号，避免每条规则都写一遍。 */
 #define YY_USER_ACTION  yylval.tok.line = yylineno;
-#line 586 "C/src/lex/lex.yy.c"
+#line 597 "C/src/lex/lex.yy.c"
 /* base：指数浮点的基数部分，三种写法。点要转义。 */
-#line 588 "C/src/lex/lex.yy.c"
+#line 599 "C/src/lex/lex.yy.c"
 
 #define INITIAL 0
 
@@ -801,13 +812,13 @@ YY_DECL
 		}
 
 	{
-#line 47 "C/src/lex/lexer.l"
+#line 58 "C/src/lex/lexer.l"
 
 
-#line 50 "C/src/lex/lexer.l"
+#line 61 "C/src/lex/lexer.l"
  /* ===== 注释（选做 2.3）：丢弃，不产生 Token ===== */
 
-#line 811 "C/src/lex/lex.yy.c"
+#line 822 "C/src/lex/lex.yy.c"
 
 	while ( /*CONSTCOND*/1 )		/* loops until end-of-file is reached */
 		{
@@ -876,12 +887,12 @@ do_action:	/* This label is used only to access EOF actions. */
 
 case 1:
 YY_RULE_SETUP
-#line 52 "C/src/lex/lexer.l"
+#line 63 "C/src/lex/lexer.l"
 { /* 单行注释，整段丢弃 */ }
 	YY_BREAK
 case 2:
 YY_RULE_SETUP
-#line 54 "C/src/lex/lexer.l"
+#line 65 "C/src/lex/lexer.l"
 {
                         /* 块注释：读到最先遇到的星斜杠，整段丢弃。不支持嵌套。 */
                         int c, prev = 0;
@@ -898,7 +909,7 @@ YY_RULE_SETUP
 case 3:
 /* rule 3 can match eol */
 YY_RULE_SETUP
-#line 68 "C/src/lex/lexer.l"
+#line 79 "C/src/lex/lexer.l"
 { }
 	YY_BREAK
 /* ===== 复合赋值运算符（Tests1 A-8：作为整体识别，parser 报 type B）=====
@@ -906,101 +917,101 @@ YY_RULE_SETUP
     必须排在单字符 "+" "-" "*" "/" 和 "=" 之前（最长匹配 + 等长顺序）。 */
 case 4:
 YY_RULE_SETUP
-#line 74 "C/src/lex/lexer.l"
-{ yylval.tok.sval = strdup(yytext); return COMPOUND_ASSIGN; }
+#line 85 "C/src/lex/lexer.l"
+{ yylval.tok.sval = DUP_YYTEXT(); return COMPOUND_ASSIGN; }
 	YY_BREAK
 case 5:
 YY_RULE_SETUP
-#line 75 "C/src/lex/lexer.l"
-{ yylval.tok.sval = strdup(yytext); return COMPOUND_ASSIGN; }
+#line 86 "C/src/lex/lexer.l"
+{ yylval.tok.sval = DUP_YYTEXT(); return COMPOUND_ASSIGN; }
 	YY_BREAK
 case 6:
 YY_RULE_SETUP
-#line 76 "C/src/lex/lexer.l"
-{ yylval.tok.sval = strdup(yytext); return COMPOUND_ASSIGN; }
+#line 87 "C/src/lex/lexer.l"
+{ yylval.tok.sval = DUP_YYTEXT(); return COMPOUND_ASSIGN; }
 	YY_BREAK
 case 7:
 YY_RULE_SETUP
-#line 77 "C/src/lex/lexer.l"
-{ yylval.tok.sval = strdup(yytext); return COMPOUND_ASSIGN; }
+#line 88 "C/src/lex/lexer.l"
+{ yylval.tok.sval = DUP_YYTEXT(); return COMPOUND_ASSIGN; }
 	YY_BREAK
 /* ===== 多字符运算符（必须排在单字符前）===== */
 case 8:
 YY_RULE_SETUP
-#line 81 "C/src/lex/lexer.l"
+#line 92 "C/src/lex/lexer.l"
 { return AND; }
 	YY_BREAK
 case 9:
 YY_RULE_SETUP
-#line 82 "C/src/lex/lexer.l"
+#line 93 "C/src/lex/lexer.l"
 { return OR; }
 	YY_BREAK
 case 10:
 YY_RULE_SETUP
-#line 83 "C/src/lex/lexer.l"
+#line 94 "C/src/lex/lexer.l"
 { return RELOP; }
 	YY_BREAK
 case 11:
 YY_RULE_SETUP
-#line 84 "C/src/lex/lexer.l"
+#line 95 "C/src/lex/lexer.l"
 { return RELOP; }
 	YY_BREAK
 case 12:
 YY_RULE_SETUP
-#line 85 "C/src/lex/lexer.l"
+#line 96 "C/src/lex/lexer.l"
 { return RELOP; }
 	YY_BREAK
 case 13:
 YY_RULE_SETUP
-#line 86 "C/src/lex/lexer.l"
+#line 97 "C/src/lex/lexer.l"
 { return RELOP; }
 	YY_BREAK
 /* ===== 关键字（必须排在 ID 前）===== */
 case 14:
 YY_RULE_SETUP
-#line 90 "C/src/lex/lexer.l"
-{ yylval.tok.sval = strdup(yytext); return TYPE; }
+#line 101 "C/src/lex/lexer.l"
+{ yylval.tok.sval = DUP_YYTEXT(); return TYPE; }
 	YY_BREAK
 case 15:
 YY_RULE_SETUP
-#line 91 "C/src/lex/lexer.l"
-{ yylval.tok.sval = strdup(yytext); return TYPE; }
+#line 102 "C/src/lex/lexer.l"
+{ yylval.tok.sval = DUP_YYTEXT(); return TYPE; }
 	YY_BREAK
 case 16:
 YY_RULE_SETUP
-#line 92 "C/src/lex/lexer.l"
+#line 103 "C/src/lex/lexer.l"
 { return STRUCT; }
 	YY_BREAK
 case 17:
 YY_RULE_SETUP
-#line 93 "C/src/lex/lexer.l"
+#line 104 "C/src/lex/lexer.l"
 { return RETURN; }
 	YY_BREAK
 case 18:
 YY_RULE_SETUP
-#line 94 "C/src/lex/lexer.l"
+#line 105 "C/src/lex/lexer.l"
 { return IF; }
 	YY_BREAK
 case 19:
 YY_RULE_SETUP
-#line 95 "C/src/lex/lexer.l"
+#line 106 "C/src/lex/lexer.l"
 { return ELSE; }
 	YY_BREAK
 case 20:
 YY_RULE_SETUP
-#line 96 "C/src/lex/lexer.l"
+#line 107 "C/src/lex/lexer.l"
 { return WHILE; }
 	YY_BREAK
 /* ===== 标识符 ID ===== */
 case 21:
 YY_RULE_SETUP
-#line 100 "C/src/lex/lexer.l"
-{ yylval.tok.sval = strdup(yytext); return ID; }
+#line 111 "C/src/lex/lexer.l"
+{ yylval.tok.sval = DUP_YYTEXT(); return ID; }
 	YY_BREAK
 /* ===== 整型常数 INT（选做 2.1：十/八/十六进制）===== */
 case 22:
 YY_RULE_SETUP
-#line 104 "C/src/lex/lexer.l"
+#line 115 "C/src/lex/lexer.l"
 {
                         /* 非法十六进制：0x 后出现非 hex 字符（如 0x3G）。整体报错。 */
                         out("Error type A at Line %d: Undefined character in number \"%s\".\n", yylineno, yytext);
@@ -1008,7 +1019,7 @@ YY_RULE_SETUP
 	YY_BREAK
 case 23:
 YY_RULE_SETUP
-#line 109 "C/src/lex/lexer.l"
+#line 120 "C/src/lex/lexer.l"
 {
                         /* 单独 0x/0X 后无数字，非法。 */
                         out("Error type A at Line %d: Undefined character in number \"%s\".\n", yylineno, yytext);
@@ -1016,7 +1027,7 @@ YY_RULE_SETUP
 	YY_BREAK
 case 24:
 YY_RULE_SETUP
-#line 114 "C/src/lex/lexer.l"
+#line 125 "C/src/lex/lexer.l"
 {
                         /* 合法十六进制：转十进制存入 yylval.tok.ival。 */
                         yylval.tok.ival = TO_LONG(16);
@@ -1025,7 +1036,7 @@ YY_RULE_SETUP
 	YY_BREAK
 case 25:
 YY_RULE_SETUP
-#line 120 "C/src/lex/lexer.l"
+#line 131 "C/src/lex/lexer.l"
 {
                         /* 非法八进制：0 开头但出现 8/9（如 09）。整体报错。 */
                         out("Error type A at Line %d: Undefined character in number \"%s\".\n", yylineno, yytext);
@@ -1033,23 +1044,23 @@ YY_RULE_SETUP
 	YY_BREAK
 case 26:
 YY_RULE_SETUP
-#line 125 "C/src/lex/lexer.l"
+#line 136 "C/src/lex/lexer.l"
 { yylval.tok.ival = 0; return INT; }
 	YY_BREAK
 case 27:
 YY_RULE_SETUP
-#line 126 "C/src/lex/lexer.l"
+#line 137 "C/src/lex/lexer.l"
 { yylval.tok.ival = TO_LONG(8);  return INT; }
 	YY_BREAK
 case 28:
 YY_RULE_SETUP
-#line 127 "C/src/lex/lexer.l"
+#line 138 "C/src/lex/lexer.l"
 { yylval.tok.ival = TO_LONG(10); return INT; }
 	YY_BREAK
 /* ===== 浮点常数 FLOAT（选做 2.2：含指数形式）===== */
 case 29:
 YY_RULE_SETUP
-#line 131 "C/src/lex/lexer.l"
+#line 142 "C/src/lex/lexer.l"
 {
                         /* 合法指数浮点：如 1.05e-4、43.e-4、.5E03。
                            strtof 转 float32（C-- FLOAT 是 IEEE754 单精度），再提升 double 存入 fval。 */
@@ -1059,7 +1070,7 @@ YY_RULE_SETUP
 	YY_BREAK
 case 30:
 YY_RULE_SETUP
-#line 138 "C/src/lex/lexer.l"
+#line 149 "C/src/lex/lexer.l"
 {
                         /* 非法指数浮点：e 后无数字（如 1.05e）。整体报错。 */
                         out("Error type A at Line %d: Undefined character in number \"%s\".\n", yylineno, yytext);
@@ -1069,14 +1080,14 @@ YY_RULE_SETUP
     规则比合法浮点长（多吃 .15），靠最长匹配优先，整体报错。 */
 case 31:
 YY_RULE_SETUP
-#line 145 "C/src/lex/lexer.l"
+#line 156 "C/src/lex/lexer.l"
 {
                         out("Error type A at Line %d: Invalid floating point literal '%s'.\n", yylineno, yytext);
                     }
 	YY_BREAK
 case 32:
 YY_RULE_SETUP
-#line 149 "C/src/lex/lexer.l"
+#line 160 "C/src/lex/lexer.l"
 {
                         /* 基础浮点（无指数）：小数点前后都有数字。如 3.14。 */
                         yylval.tok.fval = (double)strtof(yytext, NULL);
@@ -1087,7 +1098,7 @@ YY_RULE_SETUP
     规则比合法 INT（只吃 2）长（多吃 x），靠最长匹配优先，整体报错。 */
 case 33:
 YY_RULE_SETUP
-#line 157 "C/src/lex/lexer.l"
+#line 168 "C/src/lex/lexer.l"
 {
                         out("Error type A at Line %d: Invalid identifier starting with digit '%s'.\n", yylineno, yytext);
                     }
@@ -1095,103 +1106,103 @@ YY_RULE_SETUP
 /* ===== 单字符符号 ===== */
 case 34:
 YY_RULE_SETUP
-#line 163 "C/src/lex/lexer.l"
+#line 174 "C/src/lex/lexer.l"
 { return SEMI; }
 	YY_BREAK
 case 35:
 YY_RULE_SETUP
-#line 164 "C/src/lex/lexer.l"
+#line 175 "C/src/lex/lexer.l"
 { return COMMA; }
 	YY_BREAK
 case 36:
 YY_RULE_SETUP
-#line 165 "C/src/lex/lexer.l"
+#line 176 "C/src/lex/lexer.l"
 { return ASSIGNOP; }
 	YY_BREAK
 case 37:
 YY_RULE_SETUP
-#line 166 "C/src/lex/lexer.l"
+#line 177 "C/src/lex/lexer.l"
 { return RELOP; }
 	YY_BREAK
 case 38:
 YY_RULE_SETUP
-#line 167 "C/src/lex/lexer.l"
+#line 178 "C/src/lex/lexer.l"
 { return RELOP; }
 	YY_BREAK
 case 39:
 YY_RULE_SETUP
-#line 168 "C/src/lex/lexer.l"
+#line 179 "C/src/lex/lexer.l"
 { return PLUS; }
 	YY_BREAK
 case 40:
 YY_RULE_SETUP
-#line 169 "C/src/lex/lexer.l"
+#line 180 "C/src/lex/lexer.l"
 { return MINUS; }
 	YY_BREAK
 case 41:
 YY_RULE_SETUP
-#line 170 "C/src/lex/lexer.l"
+#line 181 "C/src/lex/lexer.l"
 { return STAR; }
 	YY_BREAK
 case 42:
 YY_RULE_SETUP
-#line 171 "C/src/lex/lexer.l"
+#line 182 "C/src/lex/lexer.l"
 { return DIV; }
 	YY_BREAK
 case 43:
 YY_RULE_SETUP
-#line 172 "C/src/lex/lexer.l"
+#line 183 "C/src/lex/lexer.l"
 { return DOT; }
 	YY_BREAK
 case 44:
 YY_RULE_SETUP
-#line 173 "C/src/lex/lexer.l"
+#line 184 "C/src/lex/lexer.l"
 { return NOT; }
 	YY_BREAK
 case 45:
 YY_RULE_SETUP
-#line 174 "C/src/lex/lexer.l"
+#line 185 "C/src/lex/lexer.l"
 { return LP; }
 	YY_BREAK
 case 46:
 YY_RULE_SETUP
-#line 175 "C/src/lex/lexer.l"
+#line 186 "C/src/lex/lexer.l"
 { return RP; }
 	YY_BREAK
 case 47:
 YY_RULE_SETUP
-#line 176 "C/src/lex/lexer.l"
+#line 187 "C/src/lex/lexer.l"
 { return LB; }
 	YY_BREAK
 case 48:
 YY_RULE_SETUP
-#line 177 "C/src/lex/lexer.l"
+#line 188 "C/src/lex/lexer.l"
 { return RB; }
 	YY_BREAK
 case 49:
 YY_RULE_SETUP
-#line 178 "C/src/lex/lexer.l"
+#line 189 "C/src/lex/lexer.l"
 { return LC; }
 	YY_BREAK
 case 50:
 YY_RULE_SETUP
-#line 179 "C/src/lex/lexer.l"
+#line 190 "C/src/lex/lexer.l"
 { return RC; }
 	YY_BREAK
 /* ===== 兜底：未定义字符（错误类型 A，Tests1 A-1 的 '$'）===== */
 case 51:
 YY_RULE_SETUP
-#line 183 "C/src/lex/lexer.l"
+#line 194 "C/src/lex/lexer.l"
 {
                         out("Error type A at Line %d: Undefined character '%s'.\n", yylineno, yytext);
                     }
 	YY_BREAK
 case 52:
 YY_RULE_SETUP
-#line 187 "C/src/lex/lexer.l"
+#line 198 "C/src/lex/lexer.l"
 ECHO;
 	YY_BREAK
-#line 1195 "C/src/lex/lex.yy.c"
+#line 1206 "C/src/lex/lex.yy.c"
 case YY_STATE_EOF(INITIAL):
 	yyterminate();
 
@@ -2208,6 +2219,6 @@ void yyfree (void * ptr )
 
 #define YYTABLES_NAME "yytables"
 
-#line 187 "C/src/lex/lexer.l"
+#line 198 "C/src/lex/lexer.l"
 
 
