@@ -1011,13 +1011,16 @@ YY_RULE_SETUP
     指数形式三部分：基数(数字+小数点，点可任意位置) + E/e + 指数(可选符号+数字串)。
     基础形式(无指数)：小数点前后都要有数字。
 
-    指数浮点的合法/非法区分不能纯正则靠最长匹配(合法与非法形式可能等长)，
-    所以这里用"宽匹配 + action 内用 C 判断"的方式：一条规则匹配"基数+e+任意后续"，
-    在 action 里检查 e 后面是否跟着合法指数(可选符号+至少一位数字)。
+    用两条规则区分合法/非法指数浮点：
+      合法：base + e + 可选符号 + 至少一位数字  ({base}[eE][+-]?{digit}+)
+      非法：base + e，但 e 后没有数字          ({base}[eE])
+    对 1.05e-4：合法规则吃整串(更长)，自动胜出。
+    对 1.05e：合法规则匹配不了(e后无数字)，非法规则吃 1.05e(比基础浮点 1.05 多1字符)，胜出。
+    合法规则必须写在非法规则前面，否则对 1.05e-4 两条等长会乱。
     base 三种写法：数字.数字(1.05)、.数字(.5)、数字.(43.) */
 case 25:
 YY_RULE_SETUP
-#line 125 "C/src/lex/lexer.l"
+#line 128 "C/src/lex/lexer.l"
 {
                         /* 合法指数浮点：e 后有可选符号和至少一位数字。如 1.05e-4、43.e-4、.5E03 */
                         printf("FLOAT: %s\n", yytext);
@@ -1025,7 +1028,7 @@ YY_RULE_SETUP
 	YY_BREAK
 case 26:
 YY_RULE_SETUP
-#line 130 "C/src/lex/lexer.l"
+#line 133 "C/src/lex/lexer.l"
 {
                         /* 非法指数浮点：有 e/E 但后面没跟合法指数数字(如 1.05e、1.05e+)。
                            这条规则匹配"基数+e"，长度比单纯的基础浮点多1，自动优先；
@@ -1035,7 +1038,7 @@ YY_RULE_SETUP
 	YY_BREAK
 case 27:
 YY_RULE_SETUP
-#line 137 "C/src/lex/lexer.l"
+#line 140 "C/src/lex/lexer.l"
 {
                         /* 基础浮点(无指数)：小数点前后都有数字。如 3.14、0.7、12.43 */
                         printf("FLOAT: %s\n", yytext);
@@ -1044,103 +1047,103 @@ YY_RULE_SETUP
 /* ===== 单字符符号 ===== */
 case 28:
 YY_RULE_SETUP
-#line 144 "C/src/lex/lexer.l"
+#line 147 "C/src/lex/lexer.l"
 { printf("SEMI\n"); }
 	YY_BREAK
 case 29:
 YY_RULE_SETUP
-#line 145 "C/src/lex/lexer.l"
+#line 148 "C/src/lex/lexer.l"
 { printf("COMMA\n"); }
 	YY_BREAK
 case 30:
 YY_RULE_SETUP
-#line 146 "C/src/lex/lexer.l"
+#line 149 "C/src/lex/lexer.l"
 { printf("ASSIGNOP\n"); }
 	YY_BREAK
 case 31:
 YY_RULE_SETUP
-#line 147 "C/src/lex/lexer.l"
+#line 150 "C/src/lex/lexer.l"
 { printf("RELOP\n"); }
 	YY_BREAK
 case 32:
 YY_RULE_SETUP
-#line 148 "C/src/lex/lexer.l"
+#line 151 "C/src/lex/lexer.l"
 { printf("RELOP\n"); }
 	YY_BREAK
 case 33:
 YY_RULE_SETUP
-#line 149 "C/src/lex/lexer.l"
+#line 152 "C/src/lex/lexer.l"
 { printf("PLUS\n"); }
 	YY_BREAK
 case 34:
 YY_RULE_SETUP
-#line 150 "C/src/lex/lexer.l"
+#line 153 "C/src/lex/lexer.l"
 { printf("MINUS\n"); }
 	YY_BREAK
 case 35:
 YY_RULE_SETUP
-#line 151 "C/src/lex/lexer.l"
+#line 154 "C/src/lex/lexer.l"
 { printf("STAR\n"); }
 	YY_BREAK
 case 36:
 YY_RULE_SETUP
-#line 152 "C/src/lex/lexer.l"
+#line 155 "C/src/lex/lexer.l"
 { printf("DIV\n"); }
 	YY_BREAK
 case 37:
 YY_RULE_SETUP
-#line 153 "C/src/lex/lexer.l"
+#line 156 "C/src/lex/lexer.l"
 { printf("DOT\n"); }
 	YY_BREAK
 case 38:
 YY_RULE_SETUP
-#line 154 "C/src/lex/lexer.l"
+#line 157 "C/src/lex/lexer.l"
 { printf("NOT\n"); }
 	YY_BREAK
 case 39:
 YY_RULE_SETUP
-#line 155 "C/src/lex/lexer.l"
+#line 158 "C/src/lex/lexer.l"
 { printf("LP\n"); }
 	YY_BREAK
 case 40:
 YY_RULE_SETUP
-#line 156 "C/src/lex/lexer.l"
+#line 159 "C/src/lex/lexer.l"
 { printf("RP\n"); }
 	YY_BREAK
 case 41:
 YY_RULE_SETUP
-#line 157 "C/src/lex/lexer.l"
+#line 160 "C/src/lex/lexer.l"
 { printf("LB\n"); }
 	YY_BREAK
 case 42:
 YY_RULE_SETUP
-#line 158 "C/src/lex/lexer.l"
+#line 161 "C/src/lex/lexer.l"
 { printf("RB\n"); }
 	YY_BREAK
 case 43:
 YY_RULE_SETUP
-#line 159 "C/src/lex/lexer.l"
+#line 162 "C/src/lex/lexer.l"
 { printf("LC\n"); }
 	YY_BREAK
 case 44:
 YY_RULE_SETUP
-#line 160 "C/src/lex/lexer.l"
+#line 163 "C/src/lex/lexer.l"
 { printf("RC\n"); }
 	YY_BREAK
 /* ===== 兜底：未定义字符（错误类型 A）===== */
 case 45:
 YY_RULE_SETUP
-#line 164 "C/src/lex/lexer.l"
+#line 167 "C/src/lex/lexer.l"
 {
                         printf("Error type A at Line %d: Mysterious characters \"%s\".\n", yylineno, yytext);
                     }
 	YY_BREAK
 case 46:
 YY_RULE_SETUP
-#line 168 "C/src/lex/lexer.l"
+#line 171 "C/src/lex/lexer.l"
 ECHO;
 	YY_BREAK
-#line 1144 "C/src/lex/lex.yy.c"
+#line 1147 "C/src/lex/lex.yy.c"
 case YY_STATE_EOF(INITIAL):
 	yyterminate();
 
@@ -2157,7 +2160,7 @@ void yyfree (void * ptr )
 
 #define YYTABLES_NAME "yytables"
 
-#line 168 "C/src/lex/lexer.l"
+#line 171 "C/src/lex/lexer.l"
 
 
 int main(int argc, char **argv)
