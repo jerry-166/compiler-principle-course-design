@@ -8,7 +8,7 @@ echo "=========================================="
 echo "  编译原理课程设计 - 环境依赖安装"
 echo "=========================================="
 
-# 目标版本（课程要求）
+# 目标版本（课程要求，qtspim新版）
 TARGET_GCC="7.5.0"
 TARGET_FLEX="2.6.4"
 TARGET_BISON="3.5.1"
@@ -31,15 +31,31 @@ echo ">>> 安装语法分析工具 bison..."
 sudo apt install -y bison
 
 echo ""
-echo ">>> 安装 MIPS 仿真器 spim..."
-sudo apt install -y spim
-
-echo ""
 echo ">>> 安装其他辅助工具 (unzip, wget)..."
 sudo apt install -y unzip wget
 
+# 卸载系统自带旧版spim 8.0
+echo ""
+echo ">>> 卸载系统自带旧版spim..."
+sudo apt remove -y spim || true
+sudo apt autoremove -y
+
+# 自动下载并安装 qtspim 9.1.20 GUI模拟器
+echo ""
+echo ">>> 下载 qtspim_9.1.20_linux64.deb..."
+QTSPIM_FILE="qtspim_9.1.20_linux64.deb"
+if [ ! -f "$QTSPIM_FILE" ]; then
+    wget https://sourceforge.net/projects/spimsimulator/files/qtspim_9.1.20_linux64.deb/download -O $QTSPIM_FILE
+fi
+
+echo ">>> 安装 qtspim..."
+sudo dpkg -i $QTSPIM_FILE || true
+# 自动补全Qt依赖
+sudo apt -f install -y
+
 # 解压 irsim（课程配套虚拟机）
-IRSIM_ZIP="资料/现课程要求(AICanUse)/irsim.zip"
+# 修复原路径缺少 ~
+IRSIM_ZIP="~/Desktop/compiler-design/compiler-principle-course-design/资料/现课程要求(AICanUse)/irsim.zip"
 if [ -f "$IRSIM_ZIP" ]; then
     echo ""
     echo ">>> 解压 irsim..."
@@ -62,7 +78,7 @@ check_version() {
     local version=$($cmd 2>/dev/null | head -1)
     echo ""
     echo "  $name:"
-  echo "    已安装: $version"
+    echo "    已安装: $version"
     echo "    课程要求: $target"
     if echo "$version" | grep -q "$target"; then
         echo "    ✅ 版本匹配"
@@ -76,14 +92,16 @@ check_version "G++"        "g++ --version"        "$TARGET_GCC"
 check_version "Flex"       "flex --version"       "$TARGET_FLEX"
 check_version "Bison"      "bison --version"      "$TARGET_BISON"
 check_version "Make"       "make --version"       "-"
-check_version "SPIM"       "spim -version"        "$TARGET_SPIM"
+# 使用qtspim检测版本，替换原spim -version
+check_version "QtSpim"  "qtspim -quiet -file /dev/null 2>/dev/null | head -n1"  "9.1.20"
 
 echo ""
 echo "=========================================="
 echo "  安装完成!"
 echo "=========================================="
 echo ""
+echo "启动图形化MIPS模拟器命令：qtspim"
+echo ""
 echo "下一步: 解压 PL/0 编译器源码并开始开发"
 echo "  unzip \"资料/现课程要求(AICanUse)/PL编译程序——C语言代码.zip\" -d C/"
 echo ""
-
