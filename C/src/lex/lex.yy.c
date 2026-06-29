@@ -342,6 +342,9 @@ void yyfree ( void *  );
 #define YY_AT_BOL() (YY_CURRENT_BUFFER_LVALUE->yy_at_bol)
 
 /* Begin user sect3 */
+
+#define yywrap() (/*CONSTCOND*/1)
+#define YY_SKIP_YYWRAP
 typedef flex_uint8_t YY_CHAR;
 
 FILE *yyin = NULL, *yyout = NULL;
@@ -371,8 +374,8 @@ static void yynoreturn yy_fatal_error ( const char* msg  );
 	(yy_hold_char) = *yy_cp; \
 	*yy_cp = '\0'; \
 	(yy_c_buf_p) = yy_cp;
-#define YY_NUM_RULES 46
-#define YY_END_OF_BUFFER 47
+#define YY_NUM_RULES 52
+#define YY_END_OF_BUFFER 53
 /* This struct is not used in this scanner,
    but its presence is necessary. */
 struct yy_trans_info
@@ -380,17 +383,19 @@ struct yy_trans_info
 	flex_int32_t yy_verify;
 	flex_int32_t yy_nxt;
 	};
-static const flex_int16_t yy_accept[85] =
+static const flex_int16_t yy_accept[95] =
     {   0,
-        0,    0,   47,   45,    3,    3,   38,   45,   39,   40,
-       35,   33,   29,   34,   37,   36,   22,   24,   28,   32,
-       30,   31,   17,   41,   42,   17,   17,   17,   17,   17,
-       17,   43,   45,   44,    3,    9,    4,    0,    2,    1,
-        0,   23,   21,   19,   24,    7,    8,    6,   17,   17,
-       17,   14,   17,   17,   17,   17,    5,   26,    1,   27,
-       21,   20,   18,   17,   17,   10,   17,   17,   17,    0,
-       25,   18,   15,   17,   17,   17,   17,   11,   17,   17,
-       16,   13,   12,    0
+        0,    0,   53,   51,    3,    3,   44,   51,   45,   46,
+       41,   39,   35,   40,   43,   42,   26,   28,   34,   38,
+       36,   37,   21,   47,   48,   21,   21,   21,   21,   21,
+       21,   49,   51,   50,    3,   13,    8,    6,    4,    5,
+        0,    2,    1,    7,    0,   27,   25,   33,   23,   28,
+       11,   12,   10,   21,   21,   21,   18,   21,   21,   21,
+       21,    9,   30,    1,   32,   25,   33,   24,   22,   21,
+       21,   14,   21,   21,   21,    0,   29,    0,   22,   19,
+       21,   21,   21,   21,   31,   15,   21,   21,   20,    0,
+       31,   17,   16,    0
+
     } ;
 
 static const YY_CHAR yy_ec[256] =
@@ -428,98 +433,106 @@ static const YY_CHAR yy_ec[256] =
 static const YY_CHAR yy_meta[44] =
     {   0,
         1,    1,    2,    1,    1,    1,    1,    1,    1,    1,
-        1,    1,    1,    3,    3,    3,    1,    1,    1,    1,
-        3,    3,    3,    3,    1,    1,    3,    3,    3,    3,
-        3,    3,    3,    3,    3,    3,    3,    3,    3,    3,
+        1,    3,    1,    4,    4,    4,    1,    1,    1,    1,
+        4,    4,    4,    4,    1,    1,    4,    4,    4,    4,
+        4,    4,    4,    4,    4,    4,    4,    4,    4,    4,
         1,    1,    1
     } ;
 
-static const flex_int16_t yy_base[88] =
+static const flex_int16_t yy_base[100] =
     {   0,
-        0,    0,  161,  162,   42,   44,  141,  154,  162,  162,
-      162,  162,  162,  162,   34,   43,   43,   48,  162,  139,
-      138,  137,    0,  162,  162,  122,  121,   31,  124,  114,
-      120,  162,  108,  162,   50,  162,  162,   54,  162,    0,
-       57,   66,   73,   76,  105,  162,  162,  162,    0,  112,
-      112,    0,  106,  105,  106,  102,  162,  113,    0,  116,
-      121,    0,    0,   97,   98,    0,   84,   79,   69,   79,
-      125,    0,    0,   63,   60,   56,   48,    0,   41,   36,
-        0,    0,    0,  162,   63,  145,   51
+        0,    0,  184,  185,   42,   44,  164,  177,  185,  185,
+      162,  161,  185,  160,   34,   43,   43,   49,  185,  159,
+      158,  157,    0,  185,  185,  142,  141,   36,  144,  134,
+      140,  185,  128,  185,   50,  185,  185,  185,  185,  185,
+       57,  185,    0,  185,   60,   69,   76,    0,   79,  108,
+      185,  185,  185,    0,  130,  125,    0,  114,  101,   98,
+       97,  185,  116,    0,  121,  126,    0,    0,    0,   99,
+       99,    0,   82,   66,   71,   82,  130,  133,    0,    0,
+       61,   51,   52,   49,  139,    0,   43,   31,    0,  142,
+      147,    0,    0,  185,  161,   64,  165,   56,   50
+
     } ;
 
-static const flex_int16_t yy_def[88] =
+static const flex_int16_t yy_def[100] =
     {   0,
-       84,    1,   84,   84,   84,   84,   84,   84,   84,   84,
-       84,   84,   84,   84,   84,   84,   84,   84,   84,   84,
-       84,   84,   85,   84,   84,   85,   85,   85,   85,   85,
-       85,   84,   84,   84,   84,   84,   84,   84,   84,   86,
-       84,   84,   84,   84,   84,   84,   84,   84,   85,   85,
-       85,   85,   85,   85,   85,   85,   84,   84,   86,   84,
-       84,   44,   87,   85,   85,   85,   85,   85,   85,   84,
-       84,   87,   85,   85,   85,   85,   85,   85,   85,   85,
-       85,   85,   85,    0,   84,   84,   84
+       94,    1,   94,   94,   94,   94,   94,   94,   94,   94,
+       94,   94,   94,   94,   94,   94,   95,   95,   94,   94,
+       94,   94,   96,   94,   94,   96,   96,   96,   96,   96,
+       96,   94,   94,   94,   94,   94,   94,   94,   94,   94,
+       94,   94,   97,   94,   94,   95,   95,   98,   94,   95,
+       94,   94,   94,   96,   96,   96,   96,   96,   96,   96,
+       96,   94,   94,   97,   94,   95,   98,   49,   99,   96,
+       96,   96,   96,   96,   96,   94,   94,   94,   99,   96,
+       96,   96,   96,   96,   94,   96,   96,   96,   96,   94,
+       94,   96,   96,    0,   94,   94,   94,   94,   94
+
     } ;
 
-static const flex_int16_t yy_nxt[206] =
+static const flex_int16_t yy_nxt[229] =
     {   0,
         4,    5,    6,    7,    8,    9,   10,   11,   12,   13,
        14,   15,   16,   17,   18,   18,   19,   20,   21,   22,
        23,   23,   23,   23,   24,   25,   23,   23,   26,   27,
        23,   28,   23,   23,   23,   29,   30,   23,   23,   31,
-       32,   33,   34,   35,   35,   35,   35,   38,   38,   38,
-       39,   35,   35,   72,   41,   40,   42,   42,   43,   41,
-       52,   45,   45,   45,   53,   49,   44,   38,   38,   38,
-       60,   60,   60,   83,   82,   58,   81,   41,   58,   42,
-       42,   43,   58,   80,   41,   58,   61,   61,   61,   62,
-       62,   62,   71,   71,   71,   79,   62,   62,   63,   63,
+       32,   33,   34,   35,   35,   35,   35,   41,   41,   41,
+       42,   35,   35,   79,   45,   43,   46,   46,   47,   67,
+       45,   44,   50,   50,   50,   57,   49,   54,   93,   58,
+       41,   41,   41,   65,   65,   65,   92,   89,   63,   88,
+       45,   63,   46,   46,   47,   63,   87,   45,   63,   66,
+       66,   66,   68,   68,   68,   77,   77,   77,   86,   68,
 
-       78,   77,   62,   62,   62,   62,   63,   63,   63,   63,
-       63,   63,   63,   63,   63,   63,   41,   76,   45,   45,
-       45,   70,   75,   70,   74,   73,   71,   71,   71,   60,
-       60,   60,   41,   69,   61,   61,   61,   58,   71,   71,
-       71,   68,   67,   66,   58,   59,   65,   59,   64,   57,
-       56,   55,   54,   51,   50,   48,   47,   46,   37,   36,
-       84,    3,   84,   84,   84,   84,   84,   84,   84,   84,
-       84,   84,   84,   84,   84,   84,   84,   84,   84,   84,
-       84,   84,   84,   84,   84,   84,   84,   84,   84,   84,
-       84,   84,   84,   84,   84,   84,   84,   84,   84,   84,
+       68,   69,   69,   84,   83,   68,   68,   68,   68,   69,
+       69,   69,   69,   69,   69,   69,   69,   69,   69,   45,
+       82,   50,   50,   50,   76,   81,   76,   80,   75,   77,
+       77,   77,   78,   74,   65,   65,   65,   45,   73,   66,
+       66,   66,   63,   77,   77,   77,   85,   85,   85,   63,
+       90,   72,   91,   91,   91,   91,   91,   91,   90,   71,
+       91,   91,   91,   48,   48,   64,   70,   64,   64,   62,
+       61,   60,   59,   56,   55,   53,   52,   51,   40,   39,
+       38,   37,   36,   94,    3,   94,   94,   94,   94,   94,
+       94,   94,   94,   94,   94,   94,   94,   94,   94,   94,
 
-       84,   84,   84,   84,   84
+       94,   94,   94,   94,   94,   94,   94,   94,   94,   94,
+       94,   94,   94,   94,   94,   94,   94,   94,   94,   94,
+       94,   94,   94,   94,   94,   94,   94,   94
     } ;
 
-static const flex_int16_t yy_chk[206] =
+static const flex_int16_t yy_chk[229] =
     {   0,
         1,    1,    1,    1,    1,    1,    1,    1,    1,    1,
         1,    1,    1,    1,    1,    1,    1,    1,    1,    1,
         1,    1,    1,    1,    1,    1,    1,    1,    1,    1,
         1,    1,    1,    1,    1,    1,    1,    1,    1,    1,
         1,    1,    1,    5,    5,    6,    6,   15,   15,   15,
-       16,   35,   35,   87,   17,   16,   17,   17,   17,   18,
-       28,   18,   18,   18,   28,   85,   17,   38,   38,   38,
-       41,   41,   41,   80,   79,   38,   77,   42,   41,   42,
-       42,   42,   38,   76,   43,   41,   43,   43,   43,   44,
-       44,   44,   70,   70,   70,   75,   44,   44,   44,   44,
+       16,   35,   35,   99,   17,   16,   17,   17,   17,   98,
+       18,   16,   18,   18,   18,   28,   17,   96,   88,   28,
+       41,   41,   41,   45,   45,   45,   87,   84,   41,   83,
+       46,   45,   46,   46,   46,   41,   82,   47,   45,   47,
+       47,   47,   49,   49,   49,   76,   76,   76,   81,   49,
 
-       74,   69,   44,   44,   44,   44,   44,   44,   44,   44,
-       44,   44,   44,   44,   44,   44,   45,   68,   45,   45,
-       45,   58,   67,   58,   65,   64,   58,   58,   58,   60,
-       60,   60,   61,   56,   61,   61,   61,   60,   71,   71,
-       71,   55,   54,   53,   60,   86,   51,   86,   50,   33,
-       31,   30,   29,   27,   26,   22,   21,   20,    8,    7,
-        3,   84,   84,   84,   84,   84,   84,   84,   84,   84,
-       84,   84,   84,   84,   84,   84,   84,   84,   84,   84,
-       84,   84,   84,   84,   84,   84,   84,   84,   84,   84,
-       84,   84,   84,   84,   84,   84,   84,   84,   84,   84,
+       49,   49,   49,   75,   74,   49,   49,   49,   49,   49,
+       49,   49,   49,   49,   49,   49,   49,   49,   49,   50,
+       73,   50,   50,   50,   63,   71,   63,   70,   61,   63,
+       63,   63,   65,   60,   65,   65,   65,   66,   59,   66,
+       66,   66,   65,   77,   77,   77,   78,   78,   78,   65,
+       85,   58,   85,   85,   85,   90,   90,   90,   91,   56,
+       91,   91,   91,   95,   95,   97,   55,   97,   97,   33,
+       31,   30,   29,   27,   26,   22,   21,   20,   14,   12,
+       11,    8,    7,    3,   94,   94,   94,   94,   94,   94,
+       94,   94,   94,   94,   94,   94,   94,   94,   94,   94,
 
-       84,   84,   84,   84,   84
+       94,   94,   94,   94,   94,   94,   94,   94,   94,   94,
+       94,   94,   94,   94,   94,   94,   94,   94,   94,   94,
+       94,   94,   94,   94,   94,   94,   94,   94
     } ;
 
 /* Table of booleans, true if rule could match eol. */
-static const flex_int32_t yy_rule_can_match_eol[47] =
+static const flex_int32_t yy_rule_can_match_eol[53] =
     {   0,
 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
-    0, 0, 0, 0, 0, 0, 0,     };
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,     };
 
 static yy_state_type yy_last_accepting_state;
 static char *yy_last_accepting_cpos;
@@ -537,32 +550,41 @@ int yy_flex_debug = 0;
 char *yytext;
 #line 1 "C/src/lex/lexer.l"
 /*
- * lexer.l - C-- 词法分析器（实践 1.1 必做 + 选做 2.1/2.2/2.3）
+ * lexer.l - C-- 词法分析器（实践 1.2：作为 Bison 的子模块）
  *
- * 必做：十进制 INT、基础 FLOAT、ID、7关键字、20类符号、错误A。
- * 选做 2.1：八进制(0开头)、十六进制(0x开头)整数，含非法形式报错。
- * 选做 2.2：指数形式浮点数(1.05e-4、.5E03、43.e-4)，含非法形式报错。
- * 选做 2.3：双斜线单行注释、斜杠星 多行注释完整识别丢弃（不支持嵌套）。
+ * 与 1.1 的区别：本文件不再是独立程序，而是被 Bison 生成的 parser 调用。
+ *   - 每条规则的 action 用 return TOKEN; 返回 Token 编号（Token 编号由 parser.tab.h 定义）
+ *   - Token 的语义值通过 yylval.tok 传给语法分析器：
+ *       INT     → yylval.tok.ival（已按进制转十进制的 long）
+ *       FLOAT   → yylval.tok.fval（strtof 转 float32 后提升为 double，打印用 %f）
+ *       ID/TYPE → yylval.tok.sval（原始词素字符串）
+ *       所有 Token → yylval.tok.line（行号，由 YY_USER_ACTION 统一设置）
+ *   - 不含 main（main 由 parser.y 提供）。
+ *   - type A 词法错误：用 out() 打印错误信息后不 return Token（继续扫描），
+ *     这样语法分析看到的还是干净的 Token 流，词法错误不影响后续匹配。
  *
- * 编译：
- *   flex -o C/src/lex/lex.yy.c C/src/lex/lexer.l
- *   gcc C/src/lex/lex.yy.c -o C/bin/scanner
- * 运行：
- *   ./C/bin/scanner test.cmm
+ * 编译（项目根目录，WSL2）：
+ *   flex  -o C/src/lex/lex.yy.c C/src/lex/lexer.l
+ *   （配合 bison 生成的 parser.tab.c 一起编译，见 docs/语法分析.md）
  *
- * 详细原理见 docs/词法分析.md。
+ * 详细原理见 docs/词法分析.md 和 docs/语法分析.md。
  */
-#line 21 "C/src/lex/lexer.l"
+#line 26 "C/src/lex/lexer.l"
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
+#include "node.h"         /* Node 类型 + out()/flush_output() */
+#include "parser.tab.h"   /* Bison 生成的 Token 编号定义 和 yylval 类型 */
 
-/* 把当前词素(yytext)按指定进制转成十进制 long。
-   strtol 第二个参数 NULL 表示不关心剩余字符，第三个是进制(8/10/16)。 */
-#define INT_VAL(base)  strtol(yytext, NULL, base)
-#line 563 "C/src/lex/lex.yy.c"
-/* base：指数浮点的"基数"部分，三种写法(数字.数字 / .数字 / 数字.)。
-   注意点是元字符，这里要匹配字面小数点，用 \. 转义。 */
-#line 566 "C/src/lex/lex.yy.c"
+/* 把当前词素按进制转十进制 long。第三个参数 8/10/16。 */
+#define TO_LONG(base)  strtol(yytext, NULL, base)
+
+/* YY_USER_ACTION：flex 每次成功匹配一条规则、执行 action 之前自动调用。
+   统一在这里设置当前 Token 的行号，避免每条规则都写一遍。 */
+#define YY_USER_ACTION  yylval.tok.line = yylineno;
+#line 586 "C/src/lex/lex.yy.c"
+/* base：指数浮点的基数部分，三种写法。点要转义。 */
+#line 588 "C/src/lex/lex.yy.c"
 
 #define INITIAL 0
 
@@ -779,13 +801,13 @@ YY_DECL
 		}
 
 	{
-#line 37 "C/src/lex/lexer.l"
+#line 47 "C/src/lex/lexer.l"
 
 
-#line 40 "C/src/lex/lexer.l"
- /* ===== 注释（选做 2.3）===== */
+#line 50 "C/src/lex/lexer.l"
+ /* ===== 注释（选做 2.3）：丢弃，不产生 Token ===== */
 
-#line 789 "C/src/lex/lex.yy.c"
+#line 811 "C/src/lex/lex.yy.c"
 
 	while ( /*CONSTCOND*/1 )		/* loops until end-of-file is reached */
 		{
@@ -812,13 +834,13 @@ yy_match:
 			while ( yy_chk[yy_base[yy_current_state] + yy_c] != yy_current_state )
 				{
 				yy_current_state = (int) yy_def[yy_current_state];
-				if ( yy_current_state >= 85 )
+				if ( yy_current_state >= 95 )
 					yy_c = yy_meta[yy_c];
 				}
 			yy_current_state = yy_nxt[yy_base[yy_current_state] + yy_c];
 			++yy_cp;
 			}
-		while ( yy_base[yy_current_state] != 162 );
+		while ( yy_base[yy_current_state] != 185 );
 
 yy_find_action:
 		yy_act = yy_accept[yy_current_state];
@@ -854,296 +876,319 @@ do_action:	/* This label is used only to access EOF actions. */
 
 case 1:
 YY_RULE_SETUP
-#line 42 "C/src/lex/lexer.l"
-{ // 单行注释：// 后到行尾，整段丢弃，不产生 Token
-                    }
+#line 52 "C/src/lex/lexer.l"
+{ /* 单行注释，整段丢弃 */ }
 	YY_BREAK
 case 2:
 YY_RULE_SETUP
-#line 45 "C/src/lex/lexer.l"
+#line 54 "C/src/lex/lexer.l"
 {
-                        // 块注释：从 /* 开始，读到最先遇到的 */ 为止，整段丢弃。
-                        // C-- 不支持嵌套，遇到第一个 */ 就结束。
+                        /* 块注释：读到最先遇到的星斜杠，整段丢弃。不支持嵌套。 */
                         int c, prev = 0;
                         while ((c = input()) != 0) {
-                            if (prev == '*' && c == '/') {
-                                break;  // 凑成星斜杠，注释闭合
-                            }
+                            if (prev == '*' && c == '/') break;
                             prev = c;
                         }
-                        // 若读到 EOF(c==0) 说明注释没闭合，扫描随之结束
                     }
 	YY_BREAK
 /* ===== 空白符：丢弃 ===== */
 case 3:
 /* rule 3 can match eol */
 YY_RULE_SETUP
-#line 60 "C/src/lex/lexer.l"
+#line 65 "C/src/lex/lexer.l"
 { }
 	YY_BREAK
-/* ===== 多字符运算符（必须排在单字符前）===== */
+/* ===== 复合赋值运算符（Tests1 A-8：作为整体识别，parser 报 type B）=====
+    单独给一个 Token，配合 parser 的错误产生式报 "Unsupported compound assignment"。
+    必须排在单字符 "+" "-" "*" "/" 和 "=" 之前（最长匹配 + 等长顺序）。 */
 case 4:
 YY_RULE_SETUP
-#line 64 "C/src/lex/lexer.l"
-{ printf("AND\n"); }
+#line 71 "C/src/lex/lexer.l"
+{ yylval.tok.sval = strdup(yytext); return COMPOUND_ASSIGN; }
 	YY_BREAK
 case 5:
 YY_RULE_SETUP
-#line 65 "C/src/lex/lexer.l"
-{ printf("OR\n"); }
+#line 72 "C/src/lex/lexer.l"
+{ yylval.tok.sval = strdup(yytext); return COMPOUND_ASSIGN; }
 	YY_BREAK
 case 6:
 YY_RULE_SETUP
-#line 66 "C/src/lex/lexer.l"
-{ printf("RELOP\n"); }
+#line 73 "C/src/lex/lexer.l"
+{ yylval.tok.sval = strdup(yytext); return COMPOUND_ASSIGN; }
 	YY_BREAK
 case 7:
 YY_RULE_SETUP
-#line 67 "C/src/lex/lexer.l"
-{ printf("RELOP\n"); }
+#line 74 "C/src/lex/lexer.l"
+{ yylval.tok.sval = strdup(yytext); return COMPOUND_ASSIGN; }
 	YY_BREAK
+/* ===== 多字符运算符（必须排在单字符前）===== */
 case 8:
 YY_RULE_SETUP
-#line 68 "C/src/lex/lexer.l"
-{ printf("RELOP\n"); }
+#line 78 "C/src/lex/lexer.l"
+{ return AND; }
 	YY_BREAK
 case 9:
 YY_RULE_SETUP
-#line 69 "C/src/lex/lexer.l"
-{ printf("RELOP\n"); }
+#line 79 "C/src/lex/lexer.l"
+{ return OR; }
 	YY_BREAK
-/* ===== 关键字（必须排在 ID 前）===== */
 case 10:
 YY_RULE_SETUP
-#line 73 "C/src/lex/lexer.l"
-{ printf("TYPE\n"); }
+#line 80 "C/src/lex/lexer.l"
+{ return RELOP; }
 	YY_BREAK
 case 11:
 YY_RULE_SETUP
-#line 74 "C/src/lex/lexer.l"
-{ printf("TYPE\n"); }
+#line 81 "C/src/lex/lexer.l"
+{ return RELOP; }
 	YY_BREAK
 case 12:
 YY_RULE_SETUP
-#line 75 "C/src/lex/lexer.l"
-{ printf("STRUCT\n"); }
+#line 82 "C/src/lex/lexer.l"
+{ return RELOP; }
 	YY_BREAK
 case 13:
 YY_RULE_SETUP
-#line 76 "C/src/lex/lexer.l"
-{ printf("RETURN\n"); }
+#line 83 "C/src/lex/lexer.l"
+{ return RELOP; }
 	YY_BREAK
+/* ===== 关键字（必须排在 ID 前）===== */
 case 14:
 YY_RULE_SETUP
-#line 77 "C/src/lex/lexer.l"
-{ printf("IF\n"); }
+#line 87 "C/src/lex/lexer.l"
+{ yylval.tok.sval = strdup(yytext); return TYPE; }
 	YY_BREAK
 case 15:
 YY_RULE_SETUP
-#line 78 "C/src/lex/lexer.l"
-{ printf("ELSE\n"); }
+#line 88 "C/src/lex/lexer.l"
+{ yylval.tok.sval = strdup(yytext); return TYPE; }
 	YY_BREAK
 case 16:
 YY_RULE_SETUP
-#line 79 "C/src/lex/lexer.l"
-{ printf("WHILE\n"); }
+#line 89 "C/src/lex/lexer.l"
+{ return STRUCT; }
 	YY_BREAK
-/* ===== 标识符 ID ===== */
 case 17:
 YY_RULE_SETUP
-#line 83 "C/src/lex/lexer.l"
-{ printf("ID: %s\n", yytext); }
+#line 90 "C/src/lex/lexer.l"
+{ return RETURN; }
 	YY_BREAK
-/* ===== 整型常数 INT（选做 2.1：十进制/八进制/十六进制）=====
-    排列依据前缀区分，非法形式靠"最长匹配"自然优先于合法形式：
-      - 0x[hex]+[非hex字母] 形如 0x3G：非法规则能吃整串，比合法 0x3 长，自动胜出。
-      - 0[0-7]*[89]        形如 09：非法规则吃整串，比合法八进制 0 长，自动胜出。
-    所以"非法"规则写在"合法"前面更清晰，但顺序不强制（最长匹配保证）。 */
 case 18:
 YY_RULE_SETUP
 #line 91 "C/src/lex/lexer.l"
-{
-                        /* 非法十六进制：0x 后出现非十六进制字符(G~Z/g~z/_等)。
-                           如 0x3G、0xGH。整体报错，避免拆成 0x3 + ID:G。 */
-                        printf("Error type A at Line %d: Illegal hexadecimal number \"%s\".\n", yylineno, yytext);
-                    }
+{ return IF; }
 	YY_BREAK
 case 19:
 YY_RULE_SETUP
-#line 97 "C/src/lex/lexer.l"
-{
-                        /* 单独的 0x / 0X 后没有任何十六进制数字，非法。如 0x; */
-                        printf("Error type A at Line %d: Illegal hexadecimal number \"%s\".\n", yylineno, yytext);
-                    }
+#line 92 "C/src/lex/lexer.l"
+{ return ELSE; }
 	YY_BREAK
 case 20:
 YY_RULE_SETUP
-#line 102 "C/src/lex/lexer.l"
-{
-                        /* 合法十六进制：0x 后至少一个十六进制数字。转十进制输出。 */
-                        printf("INT: %ld\n", INT_VAL(16));
-                    }
+#line 93 "C/src/lex/lexer.l"
+{ return WHILE; }
 	YY_BREAK
+/* ===== 标识符 ID ===== */
 case 21:
 YY_RULE_SETUP
-#line 107 "C/src/lex/lexer.l"
-{
-                        /* 非法八进制：0 开头但某位出现 8 或 9。如 09、0128。整体报错。 */
-                        printf("Error type A at Line %d: Illegal octal number \"%s\".\n", yylineno, yytext);
-                    }
+#line 97 "C/src/lex/lexer.l"
+{ yylval.tok.sval = strdup(yytext); return ID; }
 	YY_BREAK
+/* ===== 整型常数 INT（选做 2.1：十/八/十六进制）===== */
 case 22:
 YY_RULE_SETUP
-#line 112 "C/src/lex/lexer.l"
-{ printf("INT: 0\n"); }            /* 单独的 0 */
+#line 101 "C/src/lex/lexer.l"
+{
+                        /* 非法十六进制：0x 后出现非 hex 字符（如 0x3G）。整体报错。 */
+                        out("Error type A at Line %d: Undefined character in number \"%s\".\n", yylineno, yytext);
+                    }
 	YY_BREAK
 case 23:
 YY_RULE_SETUP
-#line 113 "C/src/lex/lexer.l"
-{ printf("INT: %ld\n", INT_VAL(8)); }   /* 合法八进制：0 后至少一个 0~7 */
+#line 106 "C/src/lex/lexer.l"
+{
+                        /* 单独 0x/0X 后无数字，非法。 */
+                        out("Error type A at Line %d: Undefined character in number \"%s\".\n", yylineno, yytext);
+                    }
 	YY_BREAK
 case 24:
 YY_RULE_SETUP
-#line 114 "C/src/lex/lexer.l"
-{ printf("INT: %ld\n", INT_VAL(10)); }  /* 合法十进制：1~9 开头 */
+#line 111 "C/src/lex/lexer.l"
+{
+                        /* 合法十六进制：转十进制存入 yylval.tok.ival。 */
+                        yylval.tok.ival = TO_LONG(16);
+                        return INT;
+                    }
 	YY_BREAK
-/* ===== 浮点常数 FLOAT（选做 2.2：含指数形式）=====
-    指数形式三部分：基数(数字+小数点，点可任意位置) + E/e + 指数(可选符号+数字串)。
-    基础形式(无指数)：小数点前后都要有数字。
-
-    用两条规则区分合法/非法指数浮点：
-      合法：base + e + 可选符号 + 至少一位数字  ({base}[eE][+-]?{digit}+)
-      非法：base + e，但 e 后没有数字          ({base}[eE])
-    对 1.05e-4：合法规则吃整串(更长)，自动胜出。
-    对 1.05e：合法规则匹配不了(e后无数字)，非法规则吃 1.05e(比基础浮点 1.05 多1字符)，胜出。
-    合法规则必须写在非法规则前面，否则对 1.05e-4 两条等长会乱。
-    base 三种写法：数字.数字(1.05)、.数字(.5)、数字.(43.) */
 case 25:
 YY_RULE_SETUP
-#line 128 "C/src/lex/lexer.l"
+#line 117 "C/src/lex/lexer.l"
 {
-                        /* 合法指数浮点：e 后有可选符号和至少一位数字。如 1.05e-4、43.e-4、.5E03 */
-                        printf("FLOAT: %s\n", yytext);
+                        /* 非法八进制：0 开头但出现 8/9（如 09）。整体报错。 */
+                        out("Error type A at Line %d: Undefined character in number \"%s\".\n", yylineno, yytext);
                     }
 	YY_BREAK
 case 26:
 YY_RULE_SETUP
-#line 133 "C/src/lex/lexer.l"
-{
-                        /* 非法指数浮点：有 e/E 但后面没跟合法指数数字(如 1.05e、1.05e+)。
-                           这条规则匹配"基数+e"，长度比单纯的基础浮点多1，自动优先；
-                           而合法指数浮点比它更长，会先被上一条规则匹配走。 */
-                        printf("Error type A at Line %d: Illegal floating point number \"%s\".\n", yylineno, yytext);
-                    }
+#line 122 "C/src/lex/lexer.l"
+{ yylval.tok.ival = 0; return INT; }
 	YY_BREAK
 case 27:
 YY_RULE_SETUP
-#line 140 "C/src/lex/lexer.l"
-{
-                        /* 基础浮点(无指数)：小数点前后都有数字。如 3.14、0.7、12.43 */
-                        printf("FLOAT: %s\n", yytext);
-                    }
+#line 123 "C/src/lex/lexer.l"
+{ yylval.tok.ival = TO_LONG(8);  return INT; }
 	YY_BREAK
-/* ===== 单字符符号 ===== */
 case 28:
 YY_RULE_SETUP
-#line 147 "C/src/lex/lexer.l"
-{ printf("SEMI\n"); }
+#line 124 "C/src/lex/lexer.l"
+{ yylval.tok.ival = TO_LONG(10); return INT; }
 	YY_BREAK
+/* ===== 浮点常数 FLOAT（选做 2.2：含指数形式）===== */
 case 29:
 YY_RULE_SETUP
-#line 148 "C/src/lex/lexer.l"
-{ printf("COMMA\n"); }
+#line 128 "C/src/lex/lexer.l"
+{
+                        /* 合法指数浮点：如 1.05e-4、43.e-4、.5E03。
+                           strtof 转 float32（C-- FLOAT 是 IEEE754 单精度），再提升 double 存入 fval。 */
+                        yylval.tok.fval = (double)strtof(yytext, NULL);
+                        return FLOAT;
+                    }
 	YY_BREAK
 case 30:
 YY_RULE_SETUP
-#line 149 "C/src/lex/lexer.l"
-{ printf("ASSIGNOP\n"); }
+#line 135 "C/src/lex/lexer.l"
+{
+                        /* 非法指数浮点：e 后无数字（如 1.05e）。整体报错。 */
+                        out("Error type A at Line %d: Undefined character in number \"%s\".\n", yylineno, yytext);
+                    }
 	YY_BREAK
+/* Tests1 A-5：多个小数点的非法浮点（如 3.14.15）。
+    规则比合法浮点长（多吃 .15），靠最长匹配优先，整体报错。 */
 case 31:
 YY_RULE_SETUP
-#line 150 "C/src/lex/lexer.l"
-{ printf("RELOP\n"); }
+#line 142 "C/src/lex/lexer.l"
+{
+                        out("Error type A at Line %d: Invalid floating point literal '%s'.\n", yylineno, yytext);
+                    }
 	YY_BREAK
 case 32:
 YY_RULE_SETUP
-#line 151 "C/src/lex/lexer.l"
-{ printf("RELOP\n"); }
+#line 146 "C/src/lex/lexer.l"
+{
+                        /* 基础浮点（无指数）：小数点前后都有数字。如 3.14。 */
+                        yylval.tok.fval = (double)strtof(yytext, NULL);
+                        return FLOAT;
+                    }
 	YY_BREAK
+/* Tests1 A-2：数字开头后跟字母的非法标识符（如 2x）。
+    规则比合法 INT（只吃 2）长（多吃 x），靠最长匹配优先，整体报错。 */
 case 33:
 YY_RULE_SETUP
-#line 152 "C/src/lex/lexer.l"
-{ printf("PLUS\n"); }
+#line 154 "C/src/lex/lexer.l"
+{
+                        out("Error type A at Line %d: Invalid identifier starting with digit '%s'.\n", yylineno, yytext);
+                    }
 	YY_BREAK
+/* ===== 单字符符号 ===== */
 case 34:
 YY_RULE_SETUP
-#line 153 "C/src/lex/lexer.l"
-{ printf("MINUS\n"); }
+#line 160 "C/src/lex/lexer.l"
+{ return SEMI; }
 	YY_BREAK
 case 35:
 YY_RULE_SETUP
-#line 154 "C/src/lex/lexer.l"
-{ printf("STAR\n"); }
+#line 161 "C/src/lex/lexer.l"
+{ return COMMA; }
 	YY_BREAK
 case 36:
 YY_RULE_SETUP
-#line 155 "C/src/lex/lexer.l"
-{ printf("DIV\n"); }
+#line 162 "C/src/lex/lexer.l"
+{ return ASSIGNOP; }
 	YY_BREAK
 case 37:
 YY_RULE_SETUP
-#line 156 "C/src/lex/lexer.l"
-{ printf("DOT\n"); }
+#line 163 "C/src/lex/lexer.l"
+{ return RELOP; }
 	YY_BREAK
 case 38:
 YY_RULE_SETUP
-#line 157 "C/src/lex/lexer.l"
-{ printf("NOT\n"); }
+#line 164 "C/src/lex/lexer.l"
+{ return RELOP; }
 	YY_BREAK
 case 39:
 YY_RULE_SETUP
-#line 158 "C/src/lex/lexer.l"
-{ printf("LP\n"); }
+#line 165 "C/src/lex/lexer.l"
+{ return PLUS; }
 	YY_BREAK
 case 40:
 YY_RULE_SETUP
-#line 159 "C/src/lex/lexer.l"
-{ printf("RP\n"); }
+#line 166 "C/src/lex/lexer.l"
+{ return MINUS; }
 	YY_BREAK
 case 41:
 YY_RULE_SETUP
-#line 160 "C/src/lex/lexer.l"
-{ printf("LB\n"); }
+#line 167 "C/src/lex/lexer.l"
+{ return STAR; }
 	YY_BREAK
 case 42:
 YY_RULE_SETUP
-#line 161 "C/src/lex/lexer.l"
-{ printf("RB\n"); }
+#line 168 "C/src/lex/lexer.l"
+{ return DIV; }
 	YY_BREAK
 case 43:
 YY_RULE_SETUP
-#line 162 "C/src/lex/lexer.l"
-{ printf("LC\n"); }
+#line 169 "C/src/lex/lexer.l"
+{ return DOT; }
 	YY_BREAK
 case 44:
 YY_RULE_SETUP
-#line 163 "C/src/lex/lexer.l"
-{ printf("RC\n"); }
+#line 170 "C/src/lex/lexer.l"
+{ return NOT; }
 	YY_BREAK
-/* ===== 兜底：未定义字符（错误类型 A）===== */
 case 45:
 YY_RULE_SETUP
-#line 167 "C/src/lex/lexer.l"
-{
-                        printf("Error type A at Line %d: Mysterious characters \"%s\".\n", yylineno, yytext);
-                    }
+#line 171 "C/src/lex/lexer.l"
+{ return LP; }
 	YY_BREAK
 case 46:
 YY_RULE_SETUP
-#line 171 "C/src/lex/lexer.l"
+#line 172 "C/src/lex/lexer.l"
+{ return RP; }
+	YY_BREAK
+case 47:
+YY_RULE_SETUP
+#line 173 "C/src/lex/lexer.l"
+{ return LB; }
+	YY_BREAK
+case 48:
+YY_RULE_SETUP
+#line 174 "C/src/lex/lexer.l"
+{ return RB; }
+	YY_BREAK
+case 49:
+YY_RULE_SETUP
+#line 175 "C/src/lex/lexer.l"
+{ return LC; }
+	YY_BREAK
+case 50:
+YY_RULE_SETUP
+#line 176 "C/src/lex/lexer.l"
+{ return RC; }
+	YY_BREAK
+/* ===== 兜底：未定义字符（错误类型 A，Tests1 A-1 的 '$'）===== */
+case 51:
+YY_RULE_SETUP
+#line 180 "C/src/lex/lexer.l"
+{
+                        out("Error type A at Line %d: Undefined character '%s'.\n", yylineno, yytext);
+                    }
+	YY_BREAK
+case 52:
+YY_RULE_SETUP
+#line 184 "C/src/lex/lexer.l"
 ECHO;
 	YY_BREAK
-#line 1147 "C/src/lex/lex.yy.c"
+#line 1192 "C/src/lex/lex.yy.c"
 case YY_STATE_EOF(INITIAL):
 	yyterminate();
 
@@ -1440,7 +1485,7 @@ static int yy_get_next_buffer (void)
 		while ( yy_chk[yy_base[yy_current_state] + yy_c] != yy_current_state )
 			{
 			yy_current_state = (int) yy_def[yy_current_state];
-			if ( yy_current_state >= 85 )
+			if ( yy_current_state >= 95 )
 				yy_c = yy_meta[yy_c];
 			}
 		yy_current_state = yy_nxt[yy_base[yy_current_state] + yy_c];
@@ -1468,11 +1513,11 @@ static int yy_get_next_buffer (void)
 	while ( yy_chk[yy_base[yy_current_state] + yy_c] != yy_current_state )
 		{
 		yy_current_state = (int) yy_def[yy_current_state];
-		if ( yy_current_state >= 85 )
+		if ( yy_current_state >= 95 )
 			yy_c = yy_meta[yy_c];
 		}
 	yy_current_state = yy_nxt[yy_base[yy_current_state] + yy_c];
-	yy_is_jam = (yy_current_state == 84);
+	yy_is_jam = (yy_current_state == 94);
 
 		return yy_is_jam ? 0 : yy_current_state;
 }
@@ -2160,25 +2205,6 @@ void yyfree (void * ptr )
 
 #define YYTABLES_NAME "yytables"
 
-#line 171 "C/src/lex/lexer.l"
+#line 184 "C/src/lex/lexer.l"
 
-
-int main(int argc, char **argv)
-{
-    if (argc > 1) {
-        FILE *f = fopen(argv[1], "r");
-        if (!f) {
-            perror(argv[1]);
-            return 1;
-        }
-        yyin = f;
-    }
-    yylex();
-    return 0;
-}
-
-int yywrap(void)
-{
-    return 1;
-}
 
