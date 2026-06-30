@@ -120,7 +120,9 @@ void INTERPRET()  //�����������
 				scanf("%d",&temp);
 			}
 			else
-				getch();
+				{
+					temp=getch();
+				}
 			S[S[top]]=temp;
 			break;
 		case WRT:
@@ -135,6 +137,7 @@ void INTERPRET()  //�����������
 			break;
 		case MUS:
 			S[top]=-S[top];
+				break;
 		case ADD:
 		case ADD1:
 			top--;

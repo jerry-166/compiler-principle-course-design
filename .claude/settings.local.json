@@ -16,7 +16,28 @@
       "Bash(mkdir -p D:/workspace/bianyiyuanli/docs/1.2-语法分析)",
       "Bash(git mv *)",
       "Bash(git add *)",
-      "Bash(git commit *)"
+      "Bash(git commit *)",
+      "Bash(bison -d -o C/src/syntax/parser.tab.c C/src/syntax/parser.y -Wcounterexamples)",
+      "Bash(python -c \"import sys; print\\('check pdf tools'\\)\")",
+      "Bash(pip list *)",
+      "Bash(pdftotext -layout \"资料/现课程要求\\(AICanUse\\)/Project_2.pdf\" /tmp/project2.txt)",
+      "Read(//tmp/**)",
+      "Bash(pdfinfo \"资料/现课程要求\\(AICanUse\\)/Project_2.pdf\")",
+      "Read(//d/tmp/**)",
+      "Bash(grep -v '^\\\\s*$' project2.txt)",
+      "Bash(grep -cv '^\\\\s*$' project2.txt)",
+      "Bash(pip install *)",
+      "Bash(/c/Python314/python.exe -c ' *)",
+      "Read(//usr/**)",
+      "Bash(ls /c/Python*)",
+      "Read(//c/Users/ASUS/AppData/Local/Programs/**)",
+      "Bash(powershell.exe *)",
+      "Skill(superpowers:writing-plans)",
+      "Skill(superpowers:subagent-driven-development)",
+      "Bash(bison -d -o C/src/syntax/parser.tab.c C/src/syntax/parser.y)",
+      "Bash(flex -o C/src/lex/lex.yy.c C/src/lex/lexer.l)",
+      "Bash(gcc -o C/bin/parser C/src/syntax/parser.tab.c C/src/syntax/tree.c C/src/syntax/main_tree.c C/src/lex/lex.yy.c -I C/src/syntax -lm)",
+      "Bash(grep -n \"FunDec\\\\s*:\\\\|FunDec$\\\\|FunDec LP\" C/src/syntax/parser.y)"
     ]
   }
 }

@@ -231,7 +231,7 @@ int GETPOSITION(char * id)  //ͨ����ʶ������������
 	do              //�����еĻ��¼��ע�⣺�ǻ�ģ�����˳������
 	{
 		i=BTAB[DISPLAY[j]].last;
-		while (strcasecmp(NAMETAB[i].name,CurSymbol->value.lpValue))
+		while (strcasecmp(NAMETAB[i].name,id))
 			i=NAMETAB[i].link;
 		j--;        //һ����¼����û������������һ������ȥ
 	}while( j>=0 && i==0);   
