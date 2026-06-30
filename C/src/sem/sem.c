@@ -17,9 +17,7 @@ static Type vardec_to_type(Node *vardec, Type base);
 static FieldList collect_fields(Node *deflist);
 static Type struct_specifier_type(Node *ss);
 static Type specifier_to_type(Node *spec);
-static void report_undeclared(Symbol s, void *arg);
 static void visit_extdef(Node *extdef);
-static void visit_def(Node *def, int is_global);
 static Type check_exp(Node *exp);
 static int  is_lvalue(Node *exp);
 static Node *array_base_id(Node *exp);
@@ -28,8 +26,10 @@ static void visit_compst(Node *compst, Type ret);
 static void visit_declist(Node *dl, Type base, int is_global);
 static void visit_extdeclist(Node *edl, Type base);
 static void visit_fundef(Node *spec, Node *fundec, Node *compst);
+#ifdef ENABLE_FUNC_DECL
 static void visit_fundecl(Node *spec, Node *fundec);
 static void prepass_extdef(Node *extdef);
+#endif
 
 /* ===== 错误打印 =====
    说明文字照搬 Tests2 .exp（逐字）。*/
@@ -381,6 +381,7 @@ static void visit_extdeclist(Node *edl, Type base)
 }
 
 /* 签名匹配：返回类型 + 参数个数 + 逐参数 type_equal。错误19 用。*/
+#ifdef ENABLE_FUNC_DECL
 static int func_signature_match(Symbol sym, Type ret, FieldList params, int nparam)
 {
     if (sym->nparam != nparam) return 0;
@@ -392,6 +393,7 @@ static int func_signature_match(Symbol sym, Type ret, FieldList params, int npar
     }
     return 1;
 }
+#endif
 
 /* 收集 FunDec 的形参为 FieldList（同时返回个数）。
    FunDec → ID LP VarList RP  |  ID LP RP
@@ -527,8 +529,6 @@ static void visit_fundecl(Node *spec, Node *fundec)
         }
     }
 }
-#else
-static void visit_fundecl(Node *spec, Node *fundec) { (void)spec; (void)fundec; }
 #endif
 
 /* CompSt → LC DefList StmtList RC
