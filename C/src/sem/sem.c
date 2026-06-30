@@ -29,6 +29,7 @@ static void visit_declist(Node *dl, Type base, int is_global);
 static void visit_extdeclist(Node *edl, Type base);
 static void visit_fundef(Node *spec, Node *fundec, Node *compst);
 static void visit_fundecl(Node *spec, Node *fundec);
+static void prepass_extdef(Node *extdef);
 
 /* ===== 错误打印 =====
    说明文字照搬 Tests2 .exp（逐字）。*/
@@ -44,32 +45,72 @@ static Type current_return_type = NULL;
    进函数体 = 1，进 Stmt→CompSt 嵌套块再 +1。*/
 static int nest_depth = 0;
 
+#ifdef ENABLE_FUNC_DECL
+/* 要求3.1：先扫一遍 ExtDefList，标记所有会被定义的函数名。
+   详见 sem_analyze 和 visit_fundecl。*/
+#define MAX_DEFINED_FUNCS 256
+static char *defined_func_names[MAX_DEFINED_FUNCS];
+static int   defined_func_count = 0;
+
+static void mark_defined(const char *name)
+{
+    int i;
+    for (i = 0; i < defined_func_count; i++)
+        if (strcmp(defined_func_names[i], name) == 0) return;
+    if (defined_func_count < MAX_DEFINED_FUNCS) {
+        size_t len = strlen(name);
+        char *cp = (char *)malloc(len + 1);
+        memcpy(cp, name, len + 1);
+        defined_func_names[defined_func_count++] = cp;
+    }
+}
+
+static int func_will_be_defined(const char *name)
+{
+    int i;
+    for (i = 0; i < defined_func_count; i++)
+        if (strcmp(defined_func_names[i], name) == 0) return 1;
+    return 0;
+}
+
+static void prepass_extdef(Node *extdef)
+{
+    if (!extdef || extdef->nchild < 3) return;
+    Node *second = extdef->children[1];
+    Node *third  = extdef->children[2];
+    if (!second || second->is_token || strcmp(second->name, "FunDec") != 0) return;
+    if (!third  || third->is_token  || strcmp(third->name,  "CompSt") != 0) return;
+    Node *idn = (second->nchild >= 1) ? second->children[0] : NULL;
+    if (idn && idn->is_token && strcmp(idn->name, "ID") == 0) {
+        mark_defined(idn->sval);
+    }
+}
+#endif
+
 /* ===== 入口 ===== */
 void sem_analyze(Node *root)
 {
     if (!root) return;
     symtab_init();
-    /* Program → ExtDefList */
+#ifdef ENABLE_FUNC_DECL
+    /* 要求3.1：先扫一遍 ExtDefList，标记所有会被定义的函数名。
+       这样主遍历中遇到函数声明时，能就地判定"最终是否被定义"，
+       按声明位置立即报错误18（保证行号顺序与其他错误一致）。*/
+    Node *edl0 = (root->nchild > 0) ? root->children[0] : NULL;
+    while (edl0 && edl0->nchild >= 1) {
+        Node *extdef = edl0->children[0];
+        if (extdef) prepass_extdef(extdef);
+        edl0 = (edl0->nchild >= 2) ? edl0->children[1] : NULL;
+    }
+#endif
+    /* Program → ExtDefList 正式遍历 */
     Node *edl = (root->nchild > 0) ? root->children[0] : NULL;
     while (edl && edl->nchild >= 1) {
         Node *extdef = edl->children[0];
         if (extdef) visit_extdef(extdef);
         edl = (edl->nchild >= 2) ? edl->children[1] : NULL;
     }
-#ifdef ENABLE_FUNC_DECL
-    /* 要求3.1：扫描未定义的函数声明（错误18）*/
-    symtab_for_undeclared(report_undeclared, NULL);
-#endif
 }
-
-#ifdef ENABLE_FUNC_DECL
-static void report_undeclared(Symbol s, void *arg)
-{
-    /* 错误18 文字与 E-1.exp 一致：Undefined function. */
-    sem_error(18, s->lineno, "Undefined function.");
-    (void)arg;
-}
-#endif
 
 /* ===== Specifier → Type ===== */
 
@@ -480,6 +521,10 @@ static void visit_fundecl(Node *spec, Node *fundec)
         sym->defined = 0;
         sym->lineno = idn->lineno;
         symtab_insert(sym);
+        /* 错误18：声明但全文件中从未定义 → 就地按声明行号报（保证行号顺序）*/
+        if (!func_will_be_defined(idn->sval)) {
+            sem_error(18, idn->lineno, "Undefined function.");
+        }
     }
 }
 #else
@@ -548,9 +593,9 @@ static void visit_stmt(Node *stmt)
     if (c0->is_token && strcmp(c0->name, "IF") == 0) {
         Node *cond = (stmt->nchild >= 3) ? stmt->children[2] : NULL;
         Type t = check_exp(cond);
-        if (t && !(t->kind == BASIC && t->u.basic == 0)) {
+        /* 条件须 BASIC（int 或 float；与 RELOP 一致放宽）*/
+        if (t && t->kind != BASIC)
             sem_error(7, cond->lineno, "Type mismatched for operands.");
-        }
         if (stmt->nchild >= 5) visit_stmt(stmt->children[4]);
         if (stmt->nchild >= 7) visit_stmt(stmt->children[6]);
         return;
@@ -559,9 +604,8 @@ static void visit_stmt(Node *stmt)
     if (c0->is_token && strcmp(c0->name, "WHILE") == 0) {
         Node *cond = (stmt->nchild >= 3) ? stmt->children[2] : NULL;
         Type t = check_exp(cond);
-        if (t && !(t->kind == BASIC && t->u.basic == 0)) {
+        if (t && t->kind != BASIC)
             sem_error(7, cond->lineno, "Type mismatched for operands.");
-        }
         if (stmt->nchild >= 5) visit_stmt(stmt->children[4]);
         return;
     }
@@ -697,10 +741,19 @@ static Type check_exp(Node *exp)
         }
         if (strcmp(opn, "AND") == 0 || strcmp(opn, "OR") == 0 || strcmp(opn, "RELOP") == 0) {
             Type tl = check_exp(c0), tr = check_exp(exp->children[2]);
-            if (tl && !(tl->kind == BASIC && tl->u.basic == 0))
-                sem_error(7, op->lineno, "Type mismatched for operands.");
-            if (tr && !(tr->kind == BASIC && tr->u.basic == 0))
-                sem_error(7, op->lineno, "Type mismatched for operands.");
+            /* AND/OR 两边须 int（布尔运算）；RELOP 两边须同型 BASIC（int/float 均可）*/
+            if (strcmp(opn, "AND") == 0 || strcmp(opn, "OR") == 0) {
+                if (tl && !(tl->kind == BASIC && tl->u.basic == 0))
+                    sem_error(7, op->lineno, "Type mismatched for operands.");
+                if (tr && !(tr->kind == BASIC && tr->u.basic == 0))
+                    sem_error(7, op->lineno, "Type mismatched for operands.");
+            } else {
+                /* RELOP：两边都 BASIC（int 或 float）即可 */
+                if (tl && tl->kind != BASIC)
+                    sem_error(7, op->lineno, "Type mismatched for operands.");
+                if (tr && tr->kind != BASIC)
+                    sem_error(7, op->lineno, "Type mismatched for operands.");
+            }
             return new_basic(0);
         }
         if (strcmp(opn, "PLUS") == 0 || strcmp(opn, "MINUS") == 0 ||
