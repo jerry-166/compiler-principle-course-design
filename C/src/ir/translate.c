@@ -146,23 +146,9 @@ void translate_extdef(Node *extdef)
        假设 4 不出现，跳过 */
 }
 
-/* 本地辅助：递归计算类型占用字节数。
-   BASIC = 4；ARRAY = elem_size * size；STRUCTURE 由 Task 9 完善。
-   后续 Task 7 会被 translate_addr.c 的正式 type_size 替代。 */
-static int compute_size_simple(Type t)
-{
-    if (!t) return 4;
-    switch (t->kind) {
-    case BASIC:
-        return 4;
-    case ARRAY:
-        return compute_size_simple(t->u.array.elem) * t->u.array.size;
-    case STRUCTURE:
-        /* Task 9 处理，目前简化为 0 */
-        return 0;
-    }
-    return 4;
-}
+/* 本地辅助：类型字节宽度由 translate_addr.c 的 type_size 提供（Task 7 起
+   正式使用）。结构体偏移同理。声明见下方 extern。*/
+extern int type_size(Type t);
 
 void translate_fundef(Node *extdef)
 {
@@ -217,10 +203,11 @@ void translate_compst(Node *compst)
             Node *idnode = tr_get_vardec_id(vardec);
             Type vtype = tr_vardec_to_type(vardec, base);
             translate_insert_var(idnode->sval, vtype);
-            /* 数组输出 DEC；普通变量不需要 DEC */
+            /* 数组输出 DEC；普通变量不需要 DEC。
+               大小用 translate_addr.c 的 type_size（元素宽度×size）。
+               STRUCTURE 分支 Task 9 处理（必做无结构体变量）。*/
             if (vtype && vtype->kind == ARRAY) {
-                int sz = compute_size_simple(vtype);
-                gen_dec(new_var(idnode->sval), sz);
+                gen_dec(new_var(idnode->sval), type_size(vtype));
             }
             /* STRUCTURE: Task 9 处理，必做无结构体变量，跳过 */
             declist = (declist->nchild == 3) ? declist->children[2] : NULL;

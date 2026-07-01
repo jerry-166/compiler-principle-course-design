@@ -123,6 +123,24 @@ void translate_exp(Node *exp, Operand place)
     }
 
     /* -----------------------------------------------------------------
+     * Exp -> Exp LB Exp RB（数组下标读）
+     * 翻译（place 需要结果时）：
+     *   addr = translate_addr_elem(exp)   # a[i] 的元素地址
+     *   place := *addr                    # 读出元素
+     * （实现见 translate_addr.c；本分支仅处理"读"语义，左值赋值在下方
+     *   ASSIGNOP 分支处理。）
+     * ----------------------------------------------------------------- */
+    if (exp->nchild == 4 && exp->children[1] && exp->children[1]->is_token
+        && strcmp(exp->children[1]->name, "LB") == 0) {
+        if (place_wants(place)) {
+            extern Operand translate_addr_elem(Node *exp, Type *out_elem_type);
+            Operand addr = translate_addr_elem(exp, NULL);
+            gen_load(place, addr);   /* place := *addr */
+        }
+        return;
+    }
+
+    /* -----------------------------------------------------------------
      * 二元运算 / 赋值：看 children[1] 的 token 名
      * 产生式 Exp -> Exp <OP> Exp 或 Exp -> Exp ASSIGNOP Exp
      * ----------------------------------------------------------------- */
@@ -130,7 +148,7 @@ void translate_exp(Node *exp, Operand place)
         Node *op_node = exp->children[1];
         const char *op = op_node->name;
 
-        /* ---- Exp -> Exp ASSIGNOP Exp（左值仅处理 ID）---- */
+        /* ---- Exp -> Exp ASSIGNOP Exp（左值）---- */
         if (strcmp(op, "ASSIGNOP") == 0) {
             Node *lhs = exp->children[0];
             Node *rhs = exp->children[2];
@@ -146,8 +164,21 @@ void translate_exp(Node *exp, Operand place)
                 /* 若调用方需要结果，再复制到 place */
                 if (place_wants(place))
                     gen_assign(place, vlhs);
+            } else if (lhs->nchild == 4 && lhs->children[1]
+                       && lhs->children[1]->is_token
+                       && strcmp(lhs->children[1]->name, "LB") == 0) {
+                /* 数组元素左值 a[i] = rhs：
+                 *   addr = a[i] 元素地址；*addr := rhs_val */
+                extern Operand translate_addr_elem(Node *exp, Type *out_elem_type);
+                Operand addr = translate_addr_elem(lhs, NULL);
+                Operand t = new_temp();
+                translate_exp(rhs, t);
+                gen_store(addr, t);   /* *addr := t */
+                /* 赋值表达式作为右值时取赋的值：place := t */
+                if (place_wants(place))
+                    gen_assign(place, t);
             }
-            /* 数组/结构体左值：Task 7/9 处理 */
+            /* 结构体域左值：Task 9 处理 */
             return;
         }
 
