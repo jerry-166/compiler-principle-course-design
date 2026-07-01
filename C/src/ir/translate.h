@@ -41,4 +41,18 @@ Type   tr_specifier_to_type(Node *spec);
 Type   tr_vardec_to_type(Node *vardec, Type base);
 Node  *tr_get_vardec_id(Node *vardec);
 
+/* Task 9：结构体 DefList → FieldList（保持声明顺序，尾插）*/
+FieldList tr_collect_fields(Node *deflist);
+
+/* Task 9：通用左值地址翻译（ID / 数组下标 / 结构体域，任意嵌套）。
+   返回地址 Operand（OP_TEMP），out_type 输出元素/域类型。*/
+Operand translate_addr_general(Node *exp, Type *out_type);
+
+/* Task 9：Cannot translate prepass。发现结构体变量/参数且未开
+   ENABLE_STRUCT 宏时，置全局 cannot_translate=1。*/
+void prepass_check(Node *root);
+
+/* Task 9：全局标志，1 表示不可翻译（被 prepass_check 置位）*/
+extern int cannot_translate;
+
 #endif /* TRANSLATE_H */

@@ -26,6 +26,17 @@
 #define NHASH 0x3fff
 static VarEntry *vtab[NHASH];
 
+/* Task 9：极简结构体类型表（结构体名 -> Type），独立于 2.0 的 symtab.c。
+   不复用 symtab.c 是因为它带 sem_error 等错误检查，链接会引入 main 冲突。*/
+typedef struct StructEntry {
+    char *name;
+    Type type;
+    struct StructEntry *next;
+} StructEntry;
+static StructEntry *struct_type_table[NHASH];
+
+int cannot_translate = 0;  /* prepass 置位 */
+
 /* 标准 PJW 哈希（与 sem.c 一致） */
 static unsigned pjw_hash(const char *s)
 {
@@ -75,7 +86,79 @@ void translate_insert_var(const char *src_name, Type type)
  * 部分 B：类型推导工具（从 sem.c 移植，去掉错误检查）
  * ================================================================== */
 
-/* Specifier -> TYPE  |  StructSpecifier */
+/* Task 9：注册结构体名 -> Type。已存在则覆盖（假设无重名）。
+   返回构造出的 STRUCTURE 类型。*/
+static Type register_struct(const char *name, FieldList fields)
+{
+    Type t = new_structure(fields);
+    unsigned idx = pjw_hash(name);
+    StructEntry *e;
+    for (e = struct_type_table[idx]; e; e = e->next) {
+        if (strcmp(e->name, name) == 0) { e->type = t; return t; }
+    }
+    e = (StructEntry *)malloc(sizeof(StructEntry));
+    if (!e) { fprintf(stderr, "translate: out of memory\n"); exit(1); }
+    e->name = strdup(name);
+    e->type = t;
+    e->next = struct_type_table[idx];
+    struct_type_table[idx] = e;
+    return t;
+}
+
+/* Task 9：按名查结构体类型，找不到返回 NULL。*/
+static Type lookup_struct(const char *name)
+{
+    unsigned idx = pjw_hash(name);
+    StructEntry *e;
+    for (e = struct_type_table[idx]; e; e = e->next) {
+        if (strcmp(e->name, name) == 0) return e->type;
+    }
+    return NULL;
+}
+
+/* Task 9：从结构体内部的 DefList 收集域名和类型（FieldList）。
+   保持声明顺序（尾插），因为结构体域偏移按声明顺序累加。
+   递归调用 tr_vardec_to_type / tr_specifier_to_type 处理嵌套结构体和数组域。*/
+FieldList tr_collect_fields(Node *deflist)
+{
+    FieldList head = NULL;
+    FieldList tail = NULL;   /* 尾插保持顺序 */
+    while (deflist && deflist->nchild >= 1 && deflist->children[0]) {
+        Node *def = deflist->children[0];   /* Def -> Specifier DecList SEMI */
+        if (!def || def->nchild < 2) {
+            deflist = (deflist->nchild >= 2) ? deflist->children[1] : NULL;
+            continue;
+        }
+        Node *spec = def->children[0];
+        Node *declist = def->children[1];
+        Type base = tr_specifier_to_type(spec);
+        Node *dl = declist;
+        while (dl && dl->nchild >= 1 && dl->children[0]) {
+            Node *dec = dl->children[0];    /* Dec -> VarDec [ASSIGNOP Exp] */
+            if (!dec || dec->nchild < 1) {
+                dl = (dl->nchild == 3) ? dl->children[2] : NULL;
+                continue;
+            }
+            Node *vardec = dec->children[0];
+            Node *idn = tr_get_vardec_id(vardec);
+            if (idn) {
+                Type ftype = tr_vardec_to_type(vardec, base);
+                FieldList fl = new_field(idn->sval, ftype, NULL);
+                if (!head) { head = fl; tail = fl; }
+                else { tail->tail = fl; tail = fl; }
+            }
+            dl = (dl->nchild == 3) ? dl->children[2] : NULL;
+        }
+        deflist = (deflist->nchild >= 2) ? deflist->children[1] : NULL;
+    }
+    return head;
+}
+
+/* Specifier -> TYPE  |  StructSpecifier
+   StructSpecifier 有两种形式：
+     定义：STRUCT OptTag LC DefList RC   （OptTag 可能 NULL = 匿名）
+     引用：STRUCT Tag
+   子节点可能因 addChild 跳过 NULL 而索引偏移，所以按节点名遍历。*/
 Type tr_specifier_to_type(Node *spec)
 {
     if (!spec || spec->nchild < 1) return NULL;
@@ -84,10 +167,44 @@ Type tr_specifier_to_type(Node *spec)
     if (c->is_token && strcmp(c->name, "TYPE") == 0) {
         return new_basic(strcmp(c->sval, "float") == 0 ? 1 : 0);
     }
-    /* StructSpecifier：Task 9 处理结构体。本任务（必做）用例不含结构体变量，
-       但可能出现 ExtDef -> Specifier SEMI 的纯结构体定义（不产生 IR，
-       translate_extdef 会跳过）。这里返回 new_basic(0) 占位，避免崩溃。
-       Task 9 替换为真正的结构体类型构造。 */
+    if (!c->is_token && strcmp(c->name, "StructSpecifier") == 0) {
+        Node *opttag_or_tag = NULL;
+        Node *deflist = NULL;
+        int has_lc = 0;
+        int i;
+        for (i = 0; i < c->nchild; i++) {
+            Node *ck = c->children[i];
+            if (!ck) continue;
+            if (ck->is_token) {
+                if (strcmp(ck->name, "LC") == 0) has_lc = 1;
+                continue;
+            }
+            if (strcmp(ck->name, "OptTag") == 0 || strcmp(ck->name, "Tag") == 0)
+                opttag_or_tag = ck;
+            else if (strcmp(ck->name, "DefList") == 0)
+                deflist = ck;
+        }
+        if (has_lc) {
+            /* 定义：STRUCT OptTag LC DefList RC */
+            FieldList fields = tr_collect_fields(deflist);
+            if (opttag_or_tag && opttag_or_tag->nchild > 0) {
+                Node *idnode = opttag_or_tag->children[0];
+                if (idnode && idnode->is_token && strcmp(idnode->name, "ID") == 0) {
+                    return register_struct(idnode->sval, fields);
+                }
+            }
+            /* 匿名结构体：不注册，直接返回类型 */
+            return new_structure(fields);
+        } else {
+            /* 引用：STRUCT Tag，Tag -> ID */
+            if (opttag_or_tag && opttag_or_tag->nchild > 0) {
+                Node *idnode = opttag_or_tag->children[0];
+                if (idnode && idnode->is_token && strcmp(idnode->name, "ID") == 0) {
+                    return lookup_struct(idnode->sval);
+                }
+            }
+        }
+    }
     return new_basic(0);
 }
 
@@ -128,6 +245,13 @@ Type tr_vardec_to_type(Node *vardec, Type base)
 void translate_program(Node *root)
 {
     if (!root) return;
+    prepass_check(root);
+    if (cannot_translate) {
+        fprintf(stderr,
+            "Cannot translate: Code contains variables of multi-dimensional "
+            "array type or parameters of array type.\n");
+        return;  /* 不产生任何 IR */
+    }
     Node *extdeflist = root->children[0];
     while (extdeflist && extdeflist->nchild >= 1 && extdeflist->children[0]) {
         translate_extdef(extdeflist->children[0]);
@@ -138,6 +262,10 @@ void translate_program(Node *root)
 void translate_extdef(Node *extdef)
 {
     if (!extdef || extdef->nchild < 2) return;
+    /* 始终先对 Specifier 求值：结构体定义（ExtDef -> Specifier SEMI）的
+       副作用是把结构体名注册到 struct_type_table，供后续引用 STRUCT Tag 时
+       lookup_struct 查到。即使 SEMI 形式不产生 IR，也要触发注册。*/
+    (void)tr_specifier_to_type(extdef->children[0]);
     Node *second = extdef->children[1];
     if (second && strcmp(second->name, "FunDec") == 0) {
         translate_fundef(extdef);
@@ -206,10 +334,9 @@ void translate_compst(Node *compst)
             /* 数组输出 DEC；普通变量不需要 DEC。
                大小用 translate_addr.c 的 type_size（元素宽度×size）。
                STRUCTURE 分支 Task 9 处理（必做无结构体变量）。*/
-            if (vtype && vtype->kind == ARRAY) {
+            if (vtype && (vtype->kind == ARRAY || vtype->kind == STRUCTURE)) {
                 gen_dec(new_var(idnode->sval), type_size(vtype));
             }
-            /* STRUCTURE: Task 9 处理，必做无结构体变量，跳过 */
             declist = (declist->nchild == 3) ? declist->children[2] : NULL;
         }
         deflist = (deflist->nchild >= 2) ? deflist->children[1] : NULL;
@@ -362,15 +489,42 @@ void translate_args(Node *args, Operand *arg_list, int *arg_count) {
        正序：当前 Exp 放 arg_list[0]，后面 Args 的结果放 arg_list[1..]。
        返回时 *arg_count = 实参总数。
        调用方需分配足够大的数组（固定 32，C89 兼容）。*/
-    Operand t = new_temp();
-    translate_exp(args->children[0], t);
-    if (args->nchild == 1) {
-        arg_list[0] = t;
-        *arg_count = 1;
-    } else {
-        int rest;
-        translate_args(args->children[2], arg_list + 1, &rest);
-        arg_list[0] = t;
-        *arg_count = rest + 1;
+    Node *arg_exp = args->children[0];
+
+    /* Task 9：实参是纯 ID 且类型为结构体/数组时，传地址（PDF 4.3.1 规则10）。
+       结构体形参按引用语义：ARG &v_<name>，函数内形参值即该地址。*/
+    if (arg_exp->nchild >= 1 && arg_exp->children[0] && arg_exp->children[0]->is_token
+        && strcmp(arg_exp->children[0]->name, "ID") == 0) {
+        VarEntry *e = translate_lookup_var(arg_exp->children[0]->sval);
+        if (e && e->type && (e->type->kind == STRUCTURE || e->type->kind == ARRAY)) {
+            Operand addr;
+            addr.kind = OP_ADDR;
+            addr.name = strdup(e->ir_name);   /* "v_<name>" */
+            addr.value = 0;
+            arg_list[0] = addr;
+            if (args->nchild == 1) {
+                *arg_count = 1;
+            } else {
+                int rest;
+                translate_args(args->children[2], arg_list + 1, &rest);
+                *arg_count = rest + 1;
+            }
+            return;
+        }
+    }
+
+    /* 普通实参：翻译到临时变量 */
+    {
+        Operand t = new_temp();
+        translate_exp(arg_exp, t);
+        if (args->nchild == 1) {
+            arg_list[0] = t;
+            *arg_count = 1;
+        } else {
+            int rest;
+            translate_args(args->children[2], arg_list + 1, &rest);
+            arg_list[0] = t;
+            *arg_count = rest + 1;
+        }
     }
 }

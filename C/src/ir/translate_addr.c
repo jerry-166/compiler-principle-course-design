@@ -130,3 +130,166 @@ Operand translate_addr_elem(Node *exp, Type *out_elem_type)
         return t_addr;
     }
 }
+
+/* ==================================================================
+ * Task 9：通用左值地址翻译（结构体 + 数组 + 任意嵌套）
+ *
+ *   translate_addr_general(exp, &out_type)
+ *
+ *   处理三种左值形式，统一返回"地址"Operand（OP_TEMP，其值是元素/域首地址）：
+ *     ID（普通/结构体/数组变量）   →  t := &v_<ir_name>
+ *     Exp LB Exp RB（数组下标）   →  base_addr + idx * elem_size
+ *     Exp DOT ID（结构体域）      →  base_addr + field_offset
+ *
+ *   递归处理 base，因此支持任意嵌套：结构体数组 a[i].b、数组结构体 s.f[i]、
+ *   嵌套结构体 w.u.p 等。
+ * ================================================================== */
+
+Operand translate_addr_general(Node *exp, Type *out_type)
+{
+    Node *c0 = exp->nchild >= 1 ? exp->children[0] : NULL;
+
+    /* 纯 ID 左值（不是 LB/DOT 的左操作数）：地址 = &v_<ir_name> */
+    if (c0 && c0->is_token && strcmp(c0->name, "ID") == 0
+        && !(exp->nchild >= 2 && exp->children[1] && exp->children[1]->is_token
+             && (strcmp(exp->children[1]->name, "LB") == 0
+              || strcmp(exp->children[1]->name, "DOT") == 0))) {
+        VarEntry *e = translate_lookup_var(c0->sval);
+        Operand a = new_temp();
+        if (e) {
+            gen_addr(a, new_var_from_ir(e->ir_name));
+            if (out_type) *out_type = e->type;
+        } else {
+            if (out_type) *out_type = NULL;
+        }
+        return a;
+    }
+
+    /* Exp LB Exp RB（数组下标）：base_addr + idx * elem_size */
+    if (exp->nchild == 4 && exp->children[1] && exp->children[1]->is_token
+        && strcmp(exp->children[1]->name, "LB") == 0) {
+        Type base_type = NULL;
+        Operand base_addr = translate_addr_general(exp->children[0], &base_type);
+        Type elem_type = base_type ? base_type->u.array.elem : NULL;
+        Operand t_idx = new_temp();
+        Operand t_off = new_temp();
+        Operand a = new_temp();
+        translate_exp(exp->children[2], t_idx);
+        gen_binop(IR_MUL, t_off, t_idx, new_const(type_size(elem_type)));
+        gen_binop(IR_ADD, a, base_addr, t_off);
+        if (out_type) *out_type = elem_type;
+        return a;
+    }
+
+    /* Exp DOT ID（结构体域）：base_addr + field_offset */
+    if (exp->nchild == 3 && exp->children[1] && exp->children[1]->is_token
+        && strcmp(exp->children[1]->name, "DOT") == 0) {
+        Type base_type = NULL;
+        Operand base_addr = translate_addr_general(exp->children[0], &base_type);
+        int off = 0;
+        Type ftype = NULL;
+        if (base_type && base_type->kind == STRUCTURE) {
+            Node *idnode = exp->children[2];
+            ftype = struct_field_offset(base_type->u.structure, idnode->sval, &off);
+        }
+        Operand a = new_temp();
+        gen_binop(IR_ADD, a, base_addr, new_const(off));
+        if (out_type) *out_type = ftype;
+        return a;
+    }
+
+    /* 兜底 */
+    {
+        Operand a = new_temp();
+        if (out_type) *out_type = NULL;
+        return a;
+    }
+}
+
+/* ==================================================================
+ * Task 9：Cannot translate prepass
+ *
+ *   扫描所有函数的形参和局部变量类型。未开 ENABLE_STRUCT 时，
+ *   发现结构体类型 → cannot_translate = 1（之后 translate_program
+ *   不产生任何 IR，只输出标准提示）。
+ *
+ *   注意：高维数组 / 数组参数的检测属于 Task 10，本任务只检测结构体。
+ * ================================================================== */
+
+/* 判断类型是否含结构体（递归，数组元素可能是结构体）。
+   仅在未开 ENABLE_STRUCT 时由 prepass_check 使用。*/
+#ifndef ENABLE_STRUCT
+static int type_has_struct(Type t)
+{
+    if (!t) return 0;
+    if (t->kind == BASIC) return 0;
+    if (t->kind == ARRAY) return type_has_struct(t->u.array.elem);
+    if (t->kind == STRUCTURE) return 1;
+    return 0;
+}
+#endif
+
+void prepass_check(Node *root)
+{
+#ifdef ENABLE_STRUCT
+    (void)root;  /* 开宏：结构体正常翻译，不检测 */
+    return;
+#else
+    Node *extdeflist = root->children[0];
+    /* 第一遍：先把所有结构体定义（ExtDef -> Specifier SEMI）注册到表，
+       这样引用形式 STRUCT Tag 才能查到类型。tr_specifier_to_type 会副作用注册。*/
+    {
+        Node *p = extdeflist;
+        while (p && p->nchild >= 1 && p->children[0]) {
+            Node *extdef = p->children[0];
+            if (extdef && extdef->nchild >= 1 && extdef->children[0]) {
+                (void)tr_specifier_to_type(extdef->children[0]);
+            }
+            p = (p->nchild >= 2) ? p->children[1] : NULL;
+        }
+    }
+    while (extdeflist && extdeflist->nchild >= 1 && extdeflist->children[0]) {
+        Node *extdef = extdeflist->children[0];
+        Node *second = (extdef->nchild >= 2) ? extdef->children[1] : NULL;
+        if (second && strcmp(second->name, "FunDec") == 0) {
+            /* 形参：ID LP VarList RP（nchild==4）*/
+            if (second->nchild == 4) {
+                Node *vl = second->children[2];
+                while (vl && vl->nchild >= 1 && vl->children[0]) {
+                    Node *pd = vl->children[0];  /* ParamDec -> Specifier VarDec */
+                    Type t = tr_vardec_to_type(pd->children[1],
+                                               tr_specifier_to_type(pd->children[0]));
+                    if (type_has_struct(t)) { cannot_translate = 1; return; }
+                    vl = (vl->nchild == 3) ? vl->children[2] : NULL;
+                }
+            }
+            /* 局部变量：CompSt -> LC DefList StmtList RC，按名找 DefList */
+            Node *compst = (extdef->nchild >= 3) ? extdef->children[2] : NULL;
+            Node *deflist = NULL;
+            int i;
+            if (compst) {
+                for (i = 0; i < compst->nchild; i++) {
+                    Node *ck = compst->children[i];
+                    if (ck && !ck->is_token && strcmp(ck->name, "DefList") == 0) {
+                        deflist = ck; break;
+                    }
+                }
+            }
+            while (deflist && deflist->nchild >= 1 && deflist->children[0]) {
+                Node *def = deflist->children[0];   /* Def -> Specifier DecList SEMI */
+                Node *spec = def->children[0];
+                Type base = tr_specifier_to_type(spec);
+                Node *declist = def->children[1];
+                while (declist && declist->nchild >= 1 && declist->children[0]) {
+                    Node *dec = declist->children[0];  /* Dec -> VarDec ... */
+                    Type t = tr_vardec_to_type(dec->children[0], base);
+                    if (type_has_struct(t)) { cannot_translate = 1; return; }
+                    declist = (declist->nchild == 3) ? declist->children[2] : NULL;
+                }
+                deflist = (deflist->nchild >= 2) ? deflist->children[1] : NULL;
+            }
+        }
+        extdeflist = (extdeflist->nchild >= 2) ? extdeflist->children[1] : NULL;
+    }
+#endif
+}

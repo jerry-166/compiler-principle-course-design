@@ -298,7 +298,10 @@ static long eval_operand(const char *tok)
         return strtol(tok + 1, NULL, 10);
     }
     if (tok[0] == '&') {
-        return (long)var_get(tok + 1)->mem_addr;
+        /* 取变量地址：DEC 分配过的用 mem_addr；否则用 val（结构体/数组形参
+           按引用传递时，形参 val 本身就是 ARG 传来的地址）。*/
+        ScopeVar *v = var_get(tok + 1);
+        return (v->mem_addr >= 0) ? (long)v->mem_addr : v->val;
     }
     if (tok[0] == '*') {
         ScopeVar *v = var_get(tok + 1);

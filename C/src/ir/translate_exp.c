@@ -123,18 +123,18 @@ void translate_exp(Node *exp, Operand place)
     }
 
     /* -----------------------------------------------------------------
-     * Exp -> Exp LB Exp RB（数组下标读）
+     * Exp -> Exp LB Exp RB（数组下标读）  或  Exp -> Exp DOT ID（结构体域读）
      * 翻译（place 需要结果时）：
-     *   addr = translate_addr_elem(exp)   # a[i] 的元素地址
-     *   place := *addr                    # 读出元素
-     * （实现见 translate_addr.c；本分支仅处理"读"语义，左值赋值在下方
-     *   ASSIGNOP 分支处理。）
+     *   addr = translate_addr_general(exp)   # 元素/域地址
+     *   place := *addr                       # 读出元素/域
+     * （左值赋值在下方 ASSIGNOP 分支处理。）
      * ----------------------------------------------------------------- */
-    if (exp->nchild == 4 && exp->children[1] && exp->children[1]->is_token
-        && strcmp(exp->children[1]->name, "LB") == 0) {
+    if ((exp->nchild == 4 && exp->children[1] && exp->children[1]->is_token
+         && strcmp(exp->children[1]->name, "LB") == 0)
+     || (exp->nchild == 3 && exp->children[1] && exp->children[1]->is_token
+         && strcmp(exp->children[1]->name, "DOT") == 0)) {
         if (place_wants(place)) {
-            extern Operand translate_addr_elem(Node *exp, Type *out_elem_type);
-            Operand addr = translate_addr_elem(exp, NULL);
+            Operand addr = translate_addr_general(exp, NULL);
             gen_load(place, addr);   /* place := *addr */
         }
         return;
@@ -164,13 +164,15 @@ void translate_exp(Node *exp, Operand place)
                 /* 若调用方需要结果，再复制到 place */
                 if (place_wants(place))
                     gen_assign(place, vlhs);
-            } else if (lhs->nchild == 4 && lhs->children[1]
-                       && lhs->children[1]->is_token
-                       && strcmp(lhs->children[1]->name, "LB") == 0) {
-                /* 数组元素左值 a[i] = rhs：
-                 *   addr = a[i] 元素地址；*addr := rhs_val */
-                extern Operand translate_addr_elem(Node *exp, Type *out_elem_type);
-                Operand addr = translate_addr_elem(lhs, NULL);
+            } else if ((lhs->nchild == 4 && lhs->children[1]
+                        && lhs->children[1]->is_token
+                        && strcmp(lhs->children[1]->name, "LB") == 0)
+                    || (lhs->nchild == 3 && lhs->children[1]
+                        && lhs->children[1]->is_token
+                        && strcmp(lhs->children[1]->name, "DOT") == 0)) {
+                /* 数组元素 / 结构体域左值：a[i] = rhs 或 s.f = rhs：
+                 *   addr = 元素/域地址；*addr := rhs_val */
+                Operand addr = translate_addr_general(lhs, NULL);
                 Operand t = new_temp();
                 translate_exp(rhs, t);
                 gen_store(addr, t);   /* *addr := t */
@@ -178,7 +180,7 @@ void translate_exp(Node *exp, Operand place)
                 if (place_wants(place))
                     gen_assign(place, t);
             }
-            /* 结构体域左值：Task 9 处理 */
+            /* 其他左值形式：不处理 */
             return;
         }
 

@@ -93,8 +93,11 @@ void operand_print(FILE *out, Operand op)
     case OP_VAR:
     case OP_TEMP:
     case OP_LABEL:
-    case OP_ADDR:
         fprintf(out, "%s", op.name);
+        break;
+    case OP_ADDR:
+        /* 地址操作数：打印 "&name"（用于 ARG &v_q 等传址场景）*/
+        fprintf(out, "&%s", op.name);
         break;
     case OP_CONST:
         fprintf(out, "#%d", op.value);
