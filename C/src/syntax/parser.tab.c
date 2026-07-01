@@ -1754,7 +1754,7 @@ yyreduce:
   case 58: /* Exp: Exp RELOP Exp  */
 #line 347 "C/src/syntax/parser.y"
                                          { Node *n = NT("Exp"); addChild(n,(yyvsp[-2].node));
-                                           Node *r = TKS("RELOP", (yyvsp[-1].tok), NO_VAL); addChild(n,r);
+                                           Node *r = TKS("RELOP", (yyvsp[-1].tok), VAL_STR); addChild(n,r);
                                            addChild(n, (yyvsp[0].node)); (yyval.node) = n; }
 #line 1760 "C/src/syntax/parser.tab.c"
     break;

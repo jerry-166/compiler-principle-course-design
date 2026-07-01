@@ -949,22 +949,22 @@ YY_RULE_SETUP
 case 10:
 YY_RULE_SETUP
 #line 94 "C/src/lex/lexer.l"
-{ return RELOP; }
+{ yylval.tok.sval = DUP_YYTEXT(); return RELOP; }
 	YY_BREAK
 case 11:
 YY_RULE_SETUP
 #line 95 "C/src/lex/lexer.l"
-{ return RELOP; }
+{ yylval.tok.sval = DUP_YYTEXT(); return RELOP; }
 	YY_BREAK
 case 12:
 YY_RULE_SETUP
 #line 96 "C/src/lex/lexer.l"
-{ return RELOP; }
+{ yylval.tok.sval = DUP_YYTEXT(); return RELOP; }
 	YY_BREAK
 case 13:
 YY_RULE_SETUP
 #line 97 "C/src/lex/lexer.l"
-{ return RELOP; }
+{ yylval.tok.sval = DUP_YYTEXT(); return RELOP; }
 	YY_BREAK
 /* ===== 关键字（必须排在 ID 前）===== */
 case 14:
@@ -1122,12 +1122,12 @@ YY_RULE_SETUP
 case 37:
 YY_RULE_SETUP
 #line 177 "C/src/lex/lexer.l"
-{ return RELOP; }
+{ yylval.tok.sval = DUP_YYTEXT(); return RELOP; }
 	YY_BREAK
 case 38:
 YY_RULE_SETUP
 #line 178 "C/src/lex/lexer.l"
-{ return RELOP; }
+{ yylval.tok.sval = DUP_YYTEXT(); return RELOP; }
 	YY_BREAK
 case 39:
 YY_RULE_SETUP

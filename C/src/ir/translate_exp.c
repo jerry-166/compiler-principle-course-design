@@ -147,7 +147,36 @@ void translate_exp(Node *exp, Operand place)
     }
 
     /* -----------------------------------------------------------------
-     * 其余产生式（函数调用、数组下标、结构体域、RELOP/AND/OR/NOT）
+     * Exp -> Exp RELOP/AND/OR Exp  或  NOT Exp
+     * 出现在"表达式上下文"（place 需要结果，而非控制流条件上下文）时，
+     * 数值化为 0/1：先令 place := #0，若条件成立跳到 l_true 处置 place := #1。
+     * （条件上下文由 translate_cond 直接处理短路跳转，不走这里。）
+     * PDF 表 4.1 RELOP 行。
+     * ----------------------------------------------------------------- */
+    if (place_wants(place)) {
+        int is_logic = 0;
+        if (exp->nchild == 3 && exp->children[1] && exp->children[1]->is_token) {
+            const char *opn = exp->children[1]->name;
+            if (strcmp(opn, "RELOP") == 0
+             || strcmp(opn, "AND") == 0
+             || strcmp(opn, "OR") == 0)
+                is_logic = 1;
+        }
+        if (!is_logic && c0->is_token && strcmp(c0->name, "NOT") == 0)
+            is_logic = 1;
+        if (is_logic) {
+            Operand l_true = new_label(), l_false = new_label();
+            gen_assign(place, new_const(0));
+            translate_cond(exp, l_true, l_false);
+            gen_label(l_true);
+            gen_assign(place, new_const(1));
+            gen_label(l_false);
+            return;
+        }
+    }
+
+    /* -----------------------------------------------------------------
+     * 其余产生式（函数调用、数组下标、结构体域）
      * 由后续 Task 实现，此处不做任何事。
      * ----------------------------------------------------------------- */
 }

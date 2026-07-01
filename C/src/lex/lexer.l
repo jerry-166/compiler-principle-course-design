@@ -90,10 +90,10 @@ base        ({digit}+\.{digit}*|\.{digit}+)
 
 "&&"                { return AND; }
 "||"                { return OR; }
-">="                { return RELOP; }
-"<="                { return RELOP; }
-"=="                { return RELOP; }
-"!="                { return RELOP; }
+">="                { yylval.tok.sval = DUP_YYTEXT(); return RELOP; }
+"<="                { yylval.tok.sval = DUP_YYTEXT(); return RELOP; }
+"=="                { yylval.tok.sval = DUP_YYTEXT(); return RELOP; }
+"!="                { yylval.tok.sval = DUP_YYTEXT(); return RELOP; }
 
  /* ===== 关键字（必须排在 ID 前）===== */
 
@@ -173,8 +173,8 @@ base        ({digit}+\.{digit}*|\.{digit}+)
 ";"                 { return SEMI; }
 ","                 { return COMMA; }
 "="                 { return ASSIGNOP; }
-">"                 { return RELOP; }
-"<"                 { return RELOP; }
+">"                 { yylval.tok.sval = DUP_YYTEXT(); return RELOP; }
+"<"                 { yylval.tok.sval = DUP_YYTEXT(); return RELOP; }
 "+"                 { return PLUS; }
 "-"                 { return MINUS; }
 "*"                 { return STAR; }

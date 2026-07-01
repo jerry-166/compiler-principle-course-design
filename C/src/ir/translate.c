@@ -236,7 +236,12 @@ void translate_compst(Node *compst)
 }
 
 /* ==================================================================
- * 部分 D：占位函数（Task 4/5/6 替换）
+ * 部分 D：控制流语句 / 条件表达式翻译（Task 5，PDF 表 4.2 / 4.3）
+ *
+ *   translate_stmt  : Stmt 节点 → IR 控制流
+ *   translate_cond  : 条件表达式 → 真假跳转（短路求值）
+ *
+ * translate_exp 的真正实现在 translate_exp.c（本文件末尾 extern 声明）。
  * ================================================================== */
 
 void translate_stmt(Node *stmt)
@@ -245,21 +250,126 @@ void translate_stmt(Node *stmt)
     Node *c0 = stmt->children[0];
 
     /* Stmt -> Exp SEMI：表达式语句，结果丢弃（哨兵） */
-    if (c0 && strcmp(c0->name, "Exp") == 0) {
-        Operand discard;
-        discard.kind = OP_CONST;
-        discard.name = NULL;
-        discard.value = 0;
-        translate_exp(c0, discard);
+    if (!c0->is_token && strcmp(c0->name, "Exp") == 0) {
+        Operand none;
+        none.kind = OP_CONST;
+        none.name = NULL;
+        none.value = 0;
+        translate_exp(c0, none);
         return;
     }
 
-    /* RETURN / IF / WHILE / CompSt：Task 5 实现 */
+    /* Stmt -> CompSt：复合语句，进入新作用域（变量在 compst 内填表） */
+    if (!c0->is_token && strcmp(c0->name, "CompSt") == 0) {
+        translate_compst(c0);
+        return;
+    }
+
+    /* Stmt -> RETURN Exp SEMI */
+    if (c0->is_token && strcmp(c0->name, "RETURN") == 0) {
+        Operand t = new_temp();
+        translate_exp(stmt->children[1], t);
+        gen_return(t);
+        return;
+    }
+
+    /* Stmt -> IF LP Exp RP Stmt  或  IF LP Exp RP Stmt ELSE Stmt */
+    if (c0->is_token && strcmp(c0->name, "IF") == 0) {
+        Operand l1 = new_label();   /* 条件为真入口 */
+        Operand l2 = new_label();   /* 条件为假入口（无 else = 整体出口） */
+        translate_cond(stmt->children[2], l1, l2);
+        gen_label(l1);
+        translate_stmt(stmt->children[4]);
+        if (stmt->nchild == 5) {
+            /* 无 ELSE：假分支直接落到出口 l2 */
+            gen_label(l2);
+        } else {
+            /* IF LP Exp RP Stmt ELSE Stmt（nchild==7）：
+               then 分支结束后跳过 else，故加 l3 作整体出口 */
+            Operand l3 = new_label();
+            gen_goto(l3);
+            gen_label(l2);
+            translate_stmt(stmt->children[6]);
+            gen_label(l3);
+        }
+        return;
+    }
+
+    /* Stmt -> WHILE LP Exp RP Stmt */
+    if (c0->is_token && strcmp(c0->name, "WHILE") == 0) {
+        Operand l1 = new_label();   /* 循环头 */
+        Operand l2 = new_label();   /* 循环体入口 */
+        Operand l3 = new_label();   /* 循环退出 */
+        gen_label(l1);
+        translate_cond(stmt->children[2], l2, l3);
+        gen_label(l2);
+        translate_stmt(stmt->children[4]);
+        gen_goto(l1);
+        gen_label(l3);
+        return;
+    }
+
+    /* 其他未知语句形式：不处理 */
 }
-void translate_cond(Node *exp, Operand l_true, Operand l_false) {
-    (void)exp; (void)l_true; (void)l_false;
+
+void translate_cond(Node *exp, Operand l_true, Operand l_false)
+{
+    if (!exp || exp->nchild < 1) return;
+
+    /* Exp -> Exp RELOP Exp */
+    if (exp->nchild == 3 && exp->children[1] && exp->children[1]->is_token
+        && strcmp(exp->children[1]->name, "RELOP") == 0) {
+        Operand t1 = new_temp(), t2 = new_temp();
+        translate_exp(exp->children[0], t1);
+        translate_exp(exp->children[2], t2);
+        const char *r = exp->children[1]->sval;
+        Relop rk;
+        if      (strcmp(r, "<")  == 0) rk = RELOP_LT;
+        else if (strcmp(r, "<=") == 0) rk = RELOP_LE;
+        else if (strcmp(r, ">")  == 0) rk = RELOP_GT;
+        else if (strcmp(r, ">=") == 0) rk = RELOP_GE;
+        else if (strcmp(r, "==") == 0) rk = RELOP_EQ;
+        else                            rk = RELOP_NE;  /* "!=" */
+        gen_if(t1, rk, t2, l_true);
+        gen_goto(l_false);
+        return;
+    }
+
+    /* Exp -> NOT Exp：真假标号互换 */
+    if (exp->children[0]->is_token && strcmp(exp->children[0]->name, "NOT") == 0) {
+        translate_cond(exp->children[1], l_false, l_true);
+        return;
+    }
+
+    /* Exp -> Exp AND Exp：短路求值，左侧假直接跳 l_false，否则求右侧 */
+    if (exp->nchild == 3 && exp->children[1] && exp->children[1]->is_token
+        && strcmp(exp->children[1]->name, "AND") == 0) {
+        Operand l = new_label();
+        translate_cond(exp->children[0], l, l_false);
+        gen_label(l);
+        translate_cond(exp->children[2], l_true, l_false);
+        return;
+    }
+
+    /* Exp -> Exp OR Exp：短路求值，左侧真直接跳 l_true，否则求右侧 */
+    if (exp->nchild == 3 && exp->children[1] && exp->children[1]->is_token
+        && strcmp(exp->children[1]->name, "OR") == 0) {
+        Operand l = new_label();
+        translate_cond(exp->children[0], l_true, l);
+        gen_label(l);
+        translate_cond(exp->children[2], l_true, l_false);
+        return;
+    }
+
+    /* 其他（数值表达式当条件）：IF t != #0 GOTO l_true; GOTO l_false */
+    {
+        Operand t = new_temp();
+        translate_exp(exp, t);
+        gen_if(t, RELOP_NE, new_const(0), l_true);
+        gen_goto(l_false);
+    }
 }
-void translate_exp(Node *exp, Operand place);  /* translate_exp.c 实现 */
+
 void translate_args(Node *args, Operand *arg_list, int *arg_count) {
     (void)args; (void)arg_list; (void)arg_count;
 }
