@@ -371,5 +371,19 @@ void translate_cond(Node *exp, Operand l_true, Operand l_false)
 }
 
 void translate_args(Node *args, Operand *arg_list, int *arg_count) {
-    (void)args; (void)arg_list; (void)arg_count;
+    /* Args -> Exp COMMA Args  |  Exp
+       正序：当前 Exp 放 arg_list[0]，后面 Args 的结果放 arg_list[1..]。
+       返回时 *arg_count = 实参总数。
+       调用方需分配足够大的数组（固定 32，C89 兼容）。*/
+    Operand t = new_temp();
+    translate_exp(args->children[0], t);
+    if (args->nchild == 1) {
+        arg_list[0] = t;
+        *arg_count = 1;
+    } else {
+        int rest;
+        translate_args(args->children[2], arg_list + 1, &rest);
+        arg_list[0] = t;
+        *arg_count = rest + 1;
+    }
 }

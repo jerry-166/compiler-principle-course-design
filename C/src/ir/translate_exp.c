@@ -56,6 +56,60 @@ void translate_exp(Node *exp, Operand place)
     }
 
     /* -----------------------------------------------------------------
+     * Exp -> ID LP RP        （无参函数调用）
+     * Exp -> ID LP Args RP   （带参函数调用）
+     * 必须在普通 ID 分支（is_id_exp）之前判断：两者都是 children[0]==ID，
+     * 但函数调用多了 LP。带 LP 的在此 return 后，普通 ID 分支只剩纯 ID。
+     * ----------------------------------------------------------------- */
+    if (c0->is_token && strcmp(c0->name, "ID") == 0
+        && exp->nchild >= 3 && exp->children[1] && exp->children[1]->is_token
+        && strcmp(exp->children[1]->name, "LP") == 0) {
+        const char *fname = c0->sval;
+
+        /* 特判 read：无参。Exp -> ID LP RP，READ place。*/
+        if (strcmp(fname, "read") == 0) {
+            if (place_wants(place))
+                gen_read(place);
+            return;
+        }
+
+        /* 特判 write：1 个参数，WRITE t，place := #0。*/
+        if (strcmp(fname, "write") == 0) {
+            Node *args = exp->children[2];   /* ID LP Args RP */
+            Operand t = new_temp();
+            translate_exp(args->children[0], t);
+            gen_write(t);
+            if (place_wants(place))
+                gen_assign(place, new_const(0));
+            return;
+        }
+
+        /* 通用函数调用 */
+        {
+            Operand arg_list[32];
+            int argc = 0;
+            int i;
+            if (exp->nchild == 4) {  /* ID LP Args RP */
+                translate_args(exp->children[2], arg_list, &argc);
+                /* ARG 正序：arg_list[0] 是第一个实参，先 ARG。
+                 * 与 irvm 语义一致（PARAM[0] 取第一个 ARG）。*/
+                for (i = 0; i < argc; i++) {
+                    gen_arg(arg_list[i]);
+                }
+            }
+            if (place_wants(place)) {
+                gen_call(place, fname);
+            } else {
+                /* 调用方丢弃结果：仍要 CALL（函数可能有副作用），
+                 * 用临时变量接住返回值。*/
+                Operand tmp = new_temp();
+                gen_call(tmp, fname);
+            }
+            return;
+        }
+    }
+
+    /* -----------------------------------------------------------------
      * Exp -> ID
      * 翻译：查符号表得 ir_name；place := v_<ir_name>
      * ----------------------------------------------------------------- */
