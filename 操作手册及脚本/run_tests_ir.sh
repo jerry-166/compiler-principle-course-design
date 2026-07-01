@@ -93,7 +93,7 @@ compile_optional() {
       "$ROOT/C/src/ir/ir.c" "$ROOT/C/src/ir/operand.c" \
       "$ROOT/C/src/ir/translate.c" "$ROOT/C/src/ir/translate_exp.c" "$ROOT/C/src/ir/translate_addr.c" \
       "$ROOT/C/src/ir/main_ir.c" \
-      -DENABLE_STRUCT -DENABLE_HIGH_ARRAY -DENABLE_ARRAY_PARAM \
+      -DENABLE_STRUCT -DENABLE_HIGH_DIM_ARRAY \
       -I "$ROOT/C/src/syntax" -I "$ROOT/C/src/sem" -I "$ROOT/C/src/ir" -lm \
       || { echo "cmmc_ir_full 编译失败（选做宏可能未实现）"; return 1; }
   echo
