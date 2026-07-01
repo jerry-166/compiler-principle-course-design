@@ -217,7 +217,7 @@ Operand translate_addr_general(Node *exp, Type *out_type)
  * ================================================================== */
 
 /* 判断类型是否含结构体（递归，数组元素可能是结构体）。
-   仅在未开 ENABLE_STRUCT 时由 prepass_check 使用。*/
+   仅在未开 ENABLE_STRUCT 时由 param_unsupported / var_unsupported 使用。*/
 #ifndef ENABLE_STRUCT
 static int type_has_struct(Type t)
 {
@@ -229,10 +229,40 @@ static int type_has_struct(Type t)
 }
 #endif
 
+/* 形参：数组（任何维数）/结构体都不支持（必做）。
+   - 未开 ENABLE_STRUCT：结构体形参不可
+   - 未开 ENABLE_HIGH_DIM_ARRAY：任何维数的数组形参不可（一维也不行）*/
+static int param_unsupported(Type t)
+{
+#ifndef ENABLE_STRUCT
+    if (type_has_struct(t)) return 1;
+#endif
+#ifndef ENABLE_HIGH_DIM_ARRAY
+    if (t && t->kind == ARRAY) return 1;  /* 数组作形参不支持 */
+#endif
+    return 0;
+}
+
+/* 局部/全局变量：高维数组（≥2维）/结构体不支持，一维数组 OK（必做支持）。
+   - 未开 ENABLE_STRUCT：结构体变量不可
+   - 未开 ENABLE_HIGH_DIM_ARRAY：≥2 维数组变量不可（一维 int buf[6] 可）*/
+static int var_unsupported(Type t)
+{
+#ifndef ENABLE_STRUCT
+    if (type_has_struct(t)) return 1;
+#endif
+#ifndef ENABLE_HIGH_DIM_ARRAY
+    /* t 是数组且其元素还是数组 → ≥2 维 */
+    if (t && t->kind == ARRAY && t->u.array.elem->kind == ARRAY) return 1;
+#endif
+    return 0;
+}
+
 void prepass_check(Node *root)
 {
-#ifdef ENABLE_STRUCT
-    (void)root;  /* 开宏：结构体正常翻译，不检测 */
+    /* 两个宏都开：什么都不检测，直接返回。*/
+#if defined(ENABLE_STRUCT) && defined(ENABLE_HIGH_DIM_ARRAY)
+    (void)root;
     return;
 #else
     Node *extdeflist = root->children[0];
@@ -259,7 +289,7 @@ void prepass_check(Node *root)
                     Node *pd = vl->children[0];  /* ParamDec -> Specifier VarDec */
                     Type t = tr_vardec_to_type(pd->children[1],
                                                tr_specifier_to_type(pd->children[0]));
-                    if (type_has_struct(t)) { cannot_translate = 1; return; }
+                    if (param_unsupported(t)) { cannot_translate = 1; return; }
                     vl = (vl->nchild == 3) ? vl->children[2] : NULL;
                 }
             }
@@ -283,7 +313,7 @@ void prepass_check(Node *root)
                 while (declist && declist->nchild >= 1 && declist->children[0]) {
                     Node *dec = declist->children[0];  /* Dec -> VarDec ... */
                     Type t = tr_vardec_to_type(dec->children[0], base);
-                    if (type_has_struct(t)) { cannot_translate = 1; return; }
+                    if (var_unsupported(t)) { cannot_translate = 1; return; }
                     declist = (declist->nchild == 3) ? declist->children[2] : NULL;
                 }
                 deflist = (deflist->nchild >= 2) ? deflist->children[1] : NULL;

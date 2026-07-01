@@ -541,7 +541,10 @@ static void run(void)
             char *vname = strtok(NULL, DELIM);
             char *sz    = strtok(NULL, DELIM);
             int  bytes  = sz ? (int)strtol(sz, NULL, 10) : 0;
-            int  slots  = bytes / (int)sizeof(long);
+            /* 按"字节"分配槽位：翻译器的数组寻址用 idx * #elem_size（字节
+               偏移），mem[] 下标必须与字节地址一致，因此 1 字节 = 1 个槽。
+               若按 bytes/sizeof(long) 分配，64 位机上相邻数组会互相覆盖。*/
+            int  slots  = bytes;
             ScopeVar *v;
             if (slots < 1) slots = 1;
             if (mem_top + slots > MEM_SIZE) {
