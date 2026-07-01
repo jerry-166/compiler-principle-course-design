@@ -227,15 +227,32 @@ Node *tr_get_vardec_id(Node *vardec)
    递归：最外层是第一维。int a[10][3] -> array(10, array(3, int))。 */
 Type tr_vardec_to_type(Node *vardec, Type base)
 {
+    /* VarDec -> ID  |  VarDec LB INT RB
+       语法树嵌套：根节点的 INT 是源码"最后写"的那一维（Bison 左递归，
+       最后归约的在最外层）。例如 int g[2][3] 的树是 Root[3] -> Mid[2] -> ID。
+
+       C 语义：源码"最先写"的维度是最外层数组大小。所以 int g[2][3]
+       的类型应为 array(2, array(3, int))，而非 array(3, array(2, int))。
+
+       收集 dims[0..n-1]（dims[0]=根维度=最后写的=最内层，dims[n-1]=最靠ID=最先写的=最外层），
+       然后按 i=0..n-1 依次 new_array 包裹：先包的最内层，最后包的最外层。*/
     if (!vardec) return base;
-    if (vardec->nchild == 4) {
-        Node *inner = vardec->children[0];
-        Node *sz = vardec->children[2];
-        int size = sz ? (int)sz->ival : 0;
-        Type inner_t = tr_vardec_to_type(inner, base);
-        return new_array(inner_t, size);
+    {
+        int dims[32];
+        int n = 0;
+        Node *p = vardec;
+        int i;
+        while (p && p->nchild == 4 && n < 32) {
+            Node *sz = p->children[2];
+            dims[n++] = sz ? (int)sz->ival : 0;
+            p = p->children[0];
+        }
+        Type t = base;
+        for (i = 0; i < n; i++) {
+            t = new_array(t, dims[i]);
+        }
+        return t;
     }
-    return base;
 }
 
 /* ==================================================================
