@@ -12,9 +12,9 @@ mkdir -p "$TMP"
 
 MODE="${1:-必做}"
 
-# 选做实现开关：Task 9/10 完成后把下面这行改成 "yes"。
+# 选做实现开关：Task 9/10 已完成（结构体 + 高维数组/数组参数），置 "yes"。
 # "no" 时 cmmc_ir_full 视为未实现，选做/all 模式会跳过 E1/E2 并提示。
-OPTIONAL_READY="no"
+OPTIONAL_READY="yes"
 
 # 颜色
 G=$'\033[32m'
