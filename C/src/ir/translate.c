@@ -239,11 +239,27 @@ void translate_compst(Node *compst)
  * 部分 D：占位函数（Task 4/5/6 替换）
  * ================================================================== */
 
-void translate_stmt(Node *stmt) { (void)stmt; }
+void translate_stmt(Node *stmt)
+{
+    if (!stmt || stmt->nchild < 1) return;
+    Node *c0 = stmt->children[0];
+
+    /* Stmt -> Exp SEMI：表达式语句，结果丢弃（哨兵） */
+    if (c0 && strcmp(c0->name, "Exp") == 0) {
+        Operand discard;
+        discard.kind = OP_CONST;
+        discard.name = NULL;
+        discard.value = 0;
+        translate_exp(c0, discard);
+        return;
+    }
+
+    /* RETURN / IF / WHILE / CompSt：Task 5 实现 */
+}
 void translate_cond(Node *exp, Operand l_true, Operand l_false) {
     (void)exp; (void)l_true; (void)l_false;
 }
-void translate_exp(Node *exp, Operand place) { (void)exp; (void)place; }
+void translate_exp(Node *exp, Operand place);  /* translate_exp.c 实现 */
 void translate_args(Node *args, Operand *arg_list, int *arg_count) {
     (void)args; (void)arg_list; (void)arg_count;
 }

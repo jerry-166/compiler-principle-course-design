@@ -5,6 +5,8 @@
 #ifndef OPERAND_H
 #define OPERAND_H
 
+#include <stdio.h>
+
 typedef enum {
     OP_VAR,       /* 源码变量：name = "v_a" */
     OP_TEMP,      /* 临时变量：name = "t1" */
