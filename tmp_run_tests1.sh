@@ -1,6 +1,6 @@
 #!/bin/bash
-# Tests1 回归：只比较有 .exp 的用例，规范化行尾
-cd /mnt/d/workspace/bianyiyuanli || exit 1
+# Tests1 回归：只比较有 .exp 的用例， 规范化行尾
+cd "$(dirname "$0")/.." || exit 1
 pass=0
 fail=0
 failed_list=""
